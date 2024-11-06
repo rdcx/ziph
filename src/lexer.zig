@@ -31,39 +31,74 @@ const Lexer = struct {
         }
     }
 
+    pub fn jumpLiteral(self: *Lexer, literal: []const u8) void {
+        for (0..literal.len) |_| {
+            self.readChar();
+        }
+    }
+
+    pub fn readInt(self: *Lexer) []const u8 {
+        const position = self.position;
+        while (isDigit(self.ch)) {
+            self.readChar();
+        }
+        return self.input[position..self.position];
+    }
+
     pub fn nextToken(self: *Lexer) token.Token {
         self.skipWhitespace();
 
         // default token type is EOF as it’s the last token
-        var tok = token.Token{
-            .token_type = token.TokenType.EOF,
-            .literal = "EOF",
-        };
-
         if (self.ch == ';') {
-            tok = token.newToken(token.TokenType.SEMICOLON, ";");
+            const tok = token.newToken(token.TokenType.SEMICOLON, ";");
+            self.readChar();
+            return tok;
         } else if (self.ch == '<') {
             if (self.isOpenTag()) {
-                tok = token.newToken(token.TokenType.PHP_OPEN_TAG, "<?php");
+                const tok = token.newToken(token.TokenType.PHP_OPEN_TAG, "<?php");
+                self.jumpLiteral(tok.literal);
+                return tok;
             } else if (self.isShortOpenTag()) {
-                tok = token.newToken(token.TokenType.PHP_SHORT_OPEN_TAG, "<?");
+                const tok = token.newToken(token.TokenType.PHP_SHORT_OPEN_TAG, "<?");
+                self.jumpLiteral(tok.literal);
+                return tok;
+            }
+        } else if (self.ch == '?') {
+            if (self.isCloseTag()) {
+                const tok = token.newToken(token.TokenType.PHP_CLOSE_TAG, "?>");
+                self.jumpLiteral(tok.literal);
+                return tok;
             }
         } else if (self.ch == '$') {
+            // skip the dollar sign
             self.readChar();
+            // readIdentifier already advances the position
+            const ident = self.readIdentifier();
+            const tok = token.newToken(token.TokenType.VARIABLE, ident);
+            return tok;
+        } else if (isDigit(self.ch)) {
+            // readInt already advances the position
+            const int = self.readInt();
+            const tok = token.newToken(token.TokenType.INTEGER, int);
+            return tok;
+        } else if (isLetter(self.ch)) {
+            // readIdentifier already advances the position
             const ident = self.readIdentifier();
             var t = token.TokenType.IDENT;
             const kw = token.getKeyword(ident);
             if (kw != null) {
                 t = kw.?;
             }
-            tok = token.newToken(t, ident);
+            const tok = token.newToken(t, ident);
+            return tok;
+        } else if (isEOF(self.ch)) {
+            const tok = token.newToken(token.TokenType.EOF, "EOF");
+            return tok;
         } else {
-            return token.newToken(token.TokenType.ILLEGAL, "ILLEGAL");
+            return token.newToken(token.TokenType.ILLEGAL, "");
         }
 
-        self.readChar();
-
-        return tok;
+        return token.newToken(token.TokenType.ILLEGAL, "");
     }
 
     fn isOpenTag(self: *Lexer) bool {
@@ -97,12 +132,45 @@ const Lexer = struct {
 
         return true;
     }
+
+    fn isCloseTag(self: *Lexer) bool {
+        const expected = "?>";
+
+        if (self.position + expected.len > self.input.len) {
+            return false;
+        }
+
+        for (0..expected.len) |i| {
+            if (self.input[self.position + i] != expected[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 };
 
 pub fn New(input: []const u8) Lexer {
     var l = Lexer{ .input = input, .position = 0, .read_position = 0, .ch = input[0] };
     l.readChar();
     return l;
+}
+
+test "Test jumpLiteral" {
+    const input = "echo 10;";
+    var l = New(input);
+
+    l.jumpLiteral("echo");
+    try std.testing.expect(l.ch == ' ');
+}
+
+test "Test readInt" {
+    const input = "12345;";
+    var l = New(input);
+
+    const int = l.readInt();
+    try std.testing.expect(std.mem.eql(u8, "12345", int));
+    try std.testing.expect(l.ch == ';');
 }
 
 test "Test readChar" {
@@ -141,8 +209,6 @@ test "Test nextToken skips whitespace" {
     var l = New(input);
 
     const tok = l.nextToken();
-    std.debug.print("{c}\n", .{l.ch});
-    std.debug.print("{s}\n", .{tok.literal});
     try std.testing.expect(tok.token_type == token.TokenType.SEMICOLON);
     try std.testing.expect(std.mem.eql(u8, ";", tok.literal));
 }
@@ -175,6 +241,20 @@ test "Test not isShortOpenTag" {
     try std.testing.expect(!l.isShortOpenTag());
 }
 
+test "Test isCloseTag" {
+    const input = "?>";
+    var l = New(input);
+
+    try std.testing.expect(l.isCloseTag());
+}
+
+test "Test not isCloseTag" {
+    const input = "d?>";
+    var l = New(input);
+
+    try std.testing.expect(!l.isCloseTag());
+}
+
 test "Test nextToken isOpenTag" {
     const input = "\n<?php";
     var l = New(input);
@@ -199,43 +279,22 @@ test "Test nextToken variable identifier" {
 
     const tok = l.nextToken();
 
-    try std.testing.expect(tok.token_type == token.TokenType.IDENT);
+    try std.testing.expect(tok.token_type == token.TokenType.VARIABLE);
     try std.testing.expect(std.mem.eql(u8, "world", tok.literal));
 }
 
-pub fn isEOF(ch: u8) bool {
-    return ch == 0;
-}
-
-pub fn isLetter(ch: u8) bool {
-    return (ch >= 'a' and ch <= 'z') or (ch >= 'A' and ch <= 'Z') or ch == '_';
-}
-
-test "Test isLetter" {
-    try std.testing.expect(isLetter('a'));
-    try std.testing.expect(isLetter('Z'));
-    try std.testing.expect(isLetter('_'));
-    try std.testing.expect(!isLetter('0'));
-    try std.testing.expect(!isLetter('-'));
-}
-
-test "Test nextToken" {
+test "Test nextToken single line" {
     const TestCase = struct {
         expected_type: token.TokenType,
         expected_literal: []const u8,
     };
-    const input =
-        \\<?php
-        \\
-        \\echo 10;
-        \\
-        \\?>
-    ;
+    const input = "<?php echo 10; ?>";
 
     // Define your test cases array
     const test_cases = [_]TestCase{
         TestCase{ .expected_type = token.TokenType.PHP_OPEN_TAG, .expected_literal = "<?php" },
         TestCase{ .expected_type = token.TokenType.ECHO, .expected_literal = "echo" },
+        TestCase{ .expected_type = token.TokenType.INTEGER, .expected_literal = "10" },
         TestCase{ .expected_type = token.TokenType.SEMICOLON, .expected_literal = ";" },
         TestCase{ .expected_type = token.TokenType.PHP_CLOSE_TAG, .expected_literal = "?>" },
         TestCase{ .expected_type = token.TokenType.EOF, .expected_literal = "EOF" },
@@ -262,4 +321,33 @@ test "Test nextToken" {
             return error.TypeOrLiteralMismatch;
         }
     }
+}
+
+pub fn isEOF(ch: u8) bool {
+    return ch == 0;
+}
+
+pub fn isLetter(ch: u8) bool {
+    return (ch >= 'a' and ch <= 'z') or (ch >= 'A' and ch <= 'Z') or ch == '_';
+}
+
+test "Test isLetter" {
+    try std.testing.expect(isLetter('a'));
+    try std.testing.expect(isLetter('Z'));
+    try std.testing.expect(isLetter('_'));
+    try std.testing.expect(!isLetter('0'));
+    try std.testing.expect(!isLetter('-'));
+}
+
+pub fn isDigit(ch: u8) bool {
+    return ch >= '0' and ch <= '9';
+}
+
+test "Test isDigit" {
+    try std.testing.expect(isDigit('0'));
+    try std.testing.expect(isDigit('9'));
+    try std.testing.expect(!isDigit('a'));
+    try std.testing.expect(!isDigit('Z'));
+    try std.testing.expect(!isDigit('_'));
+    try std.testing.expect(!isDigit(';'));
 }
