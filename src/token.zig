@@ -9,6 +9,9 @@ pub const TokenType = enum {
     IDENT,
     INTEGER,
     ECHO,
+    FUNCTION,
+    LEFT_PAREN,
+    RIGHT_PAREN,
     SEMICOLON,
     VARIABLE,
 };
@@ -22,6 +25,7 @@ pub const Keywords = [_]Keyword{
     Keyword{ .name = "<?php", .token_type = TokenType.PHP_OPEN_TAG },
     Keyword{ .name = "<?", .token_type = TokenType.PHP_SHORT_OPEN_TAG },
     Keyword{ .name = "?>", .token_type = TokenType.PHP_CLOSE_TAG },
+    Keyword{ .name = "function", .token_type = TokenType.FUNCTION },
     Keyword{ .name = "echo", .token_type = TokenType.ECHO },
 };
 
@@ -40,6 +44,7 @@ test "Test getKeyword" {
     try std.testing.expect(getKeyword("<?") == TokenType.PHP_SHORT_OPEN_TAG);
     try std.testing.expect(getKeyword("?>") == TokenType.PHP_CLOSE_TAG);
     try std.testing.expect(getKeyword("echo") == TokenType.ECHO);
+    try std.testing.expect(getKeyword("function") == TokenType.FUNCTION);
     try std.testing.expect(getKeyword("invalid") == null);
 }
 

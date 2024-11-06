@@ -1,6 +1,10 @@
 const std = @import("std");
 const token = @import("token.zig");
 
+test {
+    std.testing.refAllDecls(@This());
+}
+
 const Lexer = struct {
     input: []const u8,
     position: usize,
@@ -48,57 +52,216 @@ const Lexer = struct {
     pub fn nextToken(self: *Lexer) token.Token {
         self.skipWhitespace();
 
-        // default token type is EOF as it’s the last token
+        var tok = self.detectSemicolon();
+        if (tok != null) return tok.?;
+
+        tok = self.detectOpenTag();
+        if (tok != null) return tok.?;
+
+        tok = self.detectCloseTag();
+        if (tok != null) return tok.?;
+
+        tok = self.detectVariable();
+        if (tok != null) return tok.?;
+
+        tok = self.detectLeftParen();
+        if (tok != null) return tok.?;
+
+        tok = self.detectRightParen();
+        if (tok != null) return tok.?;
+
+        tok = self.detectInteger();
+        if (tok != null) return tok.?;
+
+        tok = self.detectIdentifier();
+        if (tok != null) return tok.?;
+
+        tok = self.detectEOF();
+        if (tok != null) return tok.?;
+
+        return token.newToken(token.TokenType.ILLEGAL, "");
+    }
+
+    fn detectSemicolon(self: *Lexer) ?token.Token {
         if (self.ch == ';') {
             const tok = token.newToken(token.TokenType.SEMICOLON, ";");
             self.readChar();
             return tok;
-        } else if (self.ch == '<') {
-            if (self.isOpenTag()) {
-                const tok = token.newToken(token.TokenType.PHP_OPEN_TAG, "<?php");
-                self.jumpLiteral(tok.literal);
-                return tok;
-            } else if (self.isShortOpenTag()) {
-                const tok = token.newToken(token.TokenType.PHP_SHORT_OPEN_TAG, "<?");
-                self.jumpLiteral(tok.literal);
-                return tok;
-            }
-        } else if (self.ch == '?') {
-            if (self.isCloseTag()) {
-                const tok = token.newToken(token.TokenType.PHP_CLOSE_TAG, "?>");
-                self.jumpLiteral(tok.literal);
-                return tok;
-            }
-        } else if (self.ch == '$') {
-            // skip the dollar sign
-            self.readChar();
-            // readIdentifier already advances the position
-            const ident = self.readIdentifier();
-            const tok = token.newToken(token.TokenType.VARIABLE, ident);
+        }
+        return null;
+    }
+
+    test "detectSemicolon returns SEMICOLON token" {
+        const input = ";";
+        var l = New(input);
+
+        const tok = l.detectSemicolon().?;
+        try std.testing.expect(tok.token_type == token.TokenType.SEMICOLON);
+        try std.testing.expect(std.mem.eql(u8, ";", tok.literal));
+    }
+
+    fn detectOpenTag(self: *Lexer) ?token.Token {
+        if (self.isOpenTag()) {
+            const tok = token.newToken(token.TokenType.PHP_OPEN_TAG, "<?php");
+            self.jumpLiteral("<?php");
             return tok;
-        } else if (isDigit(self.ch)) {
-            // readInt already advances the position
-            const int = self.readInt();
-            const tok = token.newToken(token.TokenType.INTEGER, int);
-            return tok;
-        } else if (isLetter(self.ch)) {
-            // readIdentifier already advances the position
-            const ident = self.readIdentifier();
-            var t = token.TokenType.IDENT;
-            const kw = token.getKeyword(ident);
-            if (kw != null) {
-                t = kw.?;
-            }
-            const tok = token.newToken(t, ident);
-            return tok;
-        } else if (isEOF(self.ch)) {
-            const tok = token.newToken(token.TokenType.EOF, "EOF");
-            return tok;
-        } else {
-            return token.newToken(token.TokenType.ILLEGAL, "");
         }
 
-        return token.newToken(token.TokenType.ILLEGAL, "");
+        if (self.isShortOpenTag()) {
+            const tok = token.newToken(token.TokenType.PHP_SHORT_OPEN_TAG, "<?");
+            self.jumpLiteral("<?");
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectOpenTag returns PHP_OPEN_TAG token" {
+        const input = "<?php";
+        var l = New(input);
+
+        const tok = l.detectOpenTag().?;
+        try std.testing.expect(tok.token_type == token.TokenType.PHP_OPEN_TAG);
+        try std.testing.expect(std.mem.eql(u8, "<?php", tok.literal));
+    }
+
+    fn detectCloseTag(self: *Lexer) ?token.Token {
+        if (self.isCloseTag()) {
+            const tok = token.newToken(token.TokenType.PHP_CLOSE_TAG, "?>");
+            self.jumpLiteral("?>");
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectCloseTag returns PHP_CLOSE_TAG token" {
+        const input = "?>";
+        var l = New(input);
+
+        const tok = l.detectCloseTag().?;
+        try std.testing.expect(tok.token_type == token.TokenType.PHP_CLOSE_TAG);
+        try std.testing.expect(std.mem.eql(u8, "?>", tok.literal));
+    }
+
+    fn detectEOF(self: *Lexer) ?token.Token {
+        if (isEOF(self.ch)) {
+            return token.newToken(token.TokenType.EOF, "EOF");
+        }
+        return null;
+    }
+
+    test "detectEOF returns EOF token" {
+        const input = "";
+        var l = New(input);
+        l.ch = 0;
+
+        const tok = l.detectEOF().?;
+        try std.testing.expect(tok.token_type == token.TokenType.EOF);
+        try std.testing.expect(std.mem.eql(u8, "EOF", tok.literal));
+    }
+
+    fn detectInteger(self: *Lexer) ?token.Token {
+        if (!isDigit(self.ch)) {
+            return null;
+        }
+
+        const int = self.readInt();
+        return token.newToken(token.TokenType.INTEGER, int);
+    }
+
+    test "detectInteger returns INTEGER token" {
+        const input = "12345;";
+        var l = New(input);
+
+        const tok = l.detectInteger().?;
+        try std.testing.expect(tok.token_type == token.TokenType.INTEGER);
+        try std.testing.expect(std.mem.eql(u8, "12345", tok.literal));
+    }
+
+    fn detectIdentifier(self: *Lexer) ?token.Token {
+        if (!isLetter(self.ch)) {
+            return null;
+        }
+
+        const ident = self.readIdentifier();
+        const kw = token.getKeyword(ident);
+        if (kw != null) {
+            return token.newToken(kw.?, ident);
+        }
+
+        return token.newToken(token.TokenType.IDENT, ident);
+    }
+
+    test "detectIdentifier returns IDENT token" {
+        const input = "person";
+        var l = New(input);
+
+        const tok = l.detectIdentifier().?;
+        try std.testing.expect(tok.token_type == token.TokenType.IDENT);
+        try std.testing.expect(std.mem.eql(u8, "person", tok.literal));
+    }
+
+    test "detectIdentifier returns KEYWORD token" {
+        const input = "echo";
+        var l = New(input);
+
+        const tok = l.detectIdentifier().?;
+        try std.testing.expect(tok.token_type == token.TokenType.ECHO);
+        try std.testing.expect(std.mem.eql(u8, "echo", tok.literal));
+    }
+
+    fn detectVariable(self: *Lexer) ?token.Token {
+        if (self.ch != '$') {
+            return null;
+        }
+
+        self.readChar();
+        const ident = self.readIdentifier();
+        return token.newToken(token.TokenType.VARIABLE, ident);
+    }
+
+    test "detectVariable returns VARIABLE token" {
+        const input = "$world;";
+        var l = New(input);
+
+        const tok = l.detectVariable().?;
+        try std.testing.expect(tok.token_type == token.TokenType.VARIABLE);
+        try std.testing.expect(std.mem.eql(u8, "world", tok.literal));
+    }
+
+    fn detectLeftParen(self: *Lexer) ?token.Token {
+        if (self.ch == '(') {
+            const tok = token.newToken(token.TokenType.LEFT_PAREN, "(");
+            self.readChar();
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectLeftParen returns LEFT_PAREN token" {
+        const input = "(";
+        var l = New(input);
+
+        const tok = l.detectLeftParen().?;
+        try std.testing.expect(tok.token_type == token.TokenType.LEFT_PAREN);
+        try std.testing.expect(std.mem.eql(u8, "(", tok.literal));
+    }
+
+    fn detectRightParen(self: *Lexer) ?token.Token {
+        if (self.ch == ')') {
+            const tok = token.newToken(token.TokenType.RIGHT_PAREN, ")");
+            self.readChar();
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectRightParen returns RIGHT_PAREN token" {
+        const input = ")";
+        var l = New(input);
+
+        const tok = l.detectRightParen().?;
+        try std.testing.expect(tok.token_type == token.TokenType.RIGHT_PAREN);
+        try std.testing.expect(std.mem.eql(u8, ")", tok.literal));
     }
 
     fn isOpenTag(self: *Lexer) bool {
@@ -151,7 +314,13 @@ const Lexer = struct {
 };
 
 pub fn New(input: []const u8) Lexer {
-    var l = Lexer{ .input = input, .position = 0, .read_position = 0, .ch = input[0] };
+    var ch: u8 = 0;
+
+    if (input.len > 0) {
+        ch = input[0];
+    }
+
+    var l = Lexer{ .input = input, .position = 0, .read_position = 0, .ch = ch };
     l.readChar();
     return l;
 }
@@ -271,6 +440,15 @@ test "Test nextToken keyword echo" {
     const tok = l.nextToken();
     try std.testing.expect(tok.token_type == token.TokenType.ECHO);
     try std.testing.expect(std.mem.eql(u8, "echo", tok.literal));
+}
+
+test "Test nextToken keyword function" {
+    const input = "function";
+    var l = New(input);
+
+    const tok = l.nextToken();
+    try std.testing.expect(tok.token_type == token.TokenType.FUNCTION);
+    try std.testing.expect(std.mem.eql(u8, "function", tok.literal));
 }
 
 test "Test nextToken variable identifier" {
