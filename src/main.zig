@@ -1,22 +1,18 @@
 const std = @import("std");
 const repl = @import("repl.zig");
+const flag = @import("flag.zig");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
     try stdout.print("Welcome to Ziph. The PHP Compiler written in Zig!\n", .{});
 
-    try repl.start();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc = gpa.allocator();
+    const flags = try flag.parse(alloc);
 
-    // const input = "<?php echo 10; ?>";
+    for (flags) |f| {
+        try stdout.print("Flag: {s} Value: {s}\n", .{ f.name, f.value });
+    }
 
-    // var l = lexer.New(input);
-
-    // while (true) {
-    //     const tok = l.nextToken();
-    //     if (tok.token_type == token.TokenType.EOF) {
-    //         break;
-    //     }
-
-    //     try stdout.print("Token: {}\n", .{tok.token_type});
-    // }
+    // try repl.start();
 }
