@@ -76,6 +76,12 @@ const Lexer = struct {
         tok = self.detectRightBrace();
         if (tok != null) return tok.?;
 
+        tok = self.detectLeftBracket();
+        if (tok != null) return tok.?;
+
+        tok = self.detectRightBracket();
+        if (tok != null) return tok.?;
+
         tok = self.detectInteger();
         if (tok != null) return tok.?;
 
@@ -120,43 +126,43 @@ const Lexer = struct {
 
     fn detectOpenTag(self: *Lexer) ?token.Token {
         if (self.isOpenTag()) {
-            const tok = token.newToken(token.TokenType.PHP_OPEN_TAG, "<?php");
+            const tok = token.newToken(token.TokenType.OPEN_TAG, "<?php");
             self.jumpLiteral("<?php");
             return tok;
         }
 
         if (self.isShortOpenTag()) {
-            const tok = token.newToken(token.TokenType.PHP_SHORT_OPEN_TAG, "<?");
+            const tok = token.newToken(token.TokenType.SHORT_OPEN_TAG, "<?");
             self.jumpLiteral("<?");
             return tok;
         }
         return null;
     }
 
-    test "detectOpenTag returns PHP_OPEN_TAG token" {
+    test "detectOpenTag returns OPEN_TAG token" {
         const input = "<?php";
         var l = New(input);
 
         const tok = l.detectOpenTag().?;
-        try std.testing.expect(tok.token_type == token.TokenType.PHP_OPEN_TAG);
+        try std.testing.expect(tok.token_type == token.TokenType.OPEN_TAG);
         try std.testing.expect(std.mem.eql(u8, "<?php", tok.literal));
     }
 
     fn detectCloseTag(self: *Lexer) ?token.Token {
         if (self.isCloseTag()) {
-            const tok = token.newToken(token.TokenType.PHP_CLOSE_TAG, "?>");
+            const tok = token.newToken(token.TokenType.CLOSE_TAG, "?>");
             self.jumpLiteral("?>");
             return tok;
         }
         return null;
     }
 
-    test "detectCloseTag returns PHP_CLOSE_TAG token" {
+    test "detectCloseTag returns CLOSE_TAG token" {
         const input = "?>";
         var l = New(input);
 
         const tok = l.detectCloseTag().?;
-        try std.testing.expect(tok.token_type == token.TokenType.PHP_CLOSE_TAG);
+        try std.testing.expect(tok.token_type == token.TokenType.CLOSE_TAG);
         try std.testing.expect(std.mem.eql(u8, "?>", tok.literal));
     }
 
@@ -396,6 +402,42 @@ const Lexer = struct {
         try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.literal));
     }
 
+    fn detectLeftBracket(self: *Lexer) ?token.Token {
+        if (self.ch == '[') {
+            const tok = token.newToken(token.TokenType.LEFT_BRACKET, "[");
+            self.readChar();
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectLeftBracket returns LEFT_BRACKET token" {
+        const input = "[";
+        var l = New(input);
+
+        const tok = l.detectLeftBracket().?;
+        try std.testing.expect(tok.token_type == token.TokenType.LEFT_BRACKET);
+        try std.testing.expect(std.mem.eql(u8, "[", tok.literal));
+    }
+
+    fn detectRightBracket(self: *Lexer) ?token.Token {
+        if (self.ch == ']') {
+            const tok = token.newToken(token.TokenType.RIGHT_BRACKET, "]");
+            self.readChar();
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectRightBracket returns RIGHT_BRACKET token" {
+        const input = "]";
+        var l = New(input);
+
+        const tok = l.detectRightBracket().?;
+        try std.testing.expect(tok.token_type == token.TokenType.RIGHT_BRACKET);
+        try std.testing.expect(std.mem.eql(u8, "]", tok.literal));
+    }
+
     fn isOpenTag(self: *Lexer) bool {
         const expected = "<?php";
 
@@ -556,12 +598,12 @@ test "isCloseTag returns false" {
     try std.testing.expect(!l.isCloseTag());
 }
 
-test "nextToken returns PHP_OPEN_TAG" {
+test "nextToken returns OPEN_TAG" {
     const input = "\n<?php";
     var l = New(input);
 
     const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenType.PHP_OPEN_TAG);
+    try std.testing.expect(tok.token_type == token.TokenType.OPEN_TAG);
     try std.testing.expect(std.mem.eql(u8, "<?php", tok.literal));
 }
 
@@ -665,39 +707,39 @@ test "nextToken returns ASSIGN" {
     try std.testing.expect(std.mem.eql(u8, "=", tok.literal));
 }
 
-test "nextToken returns SCALAR_TYPE int" {
+test "nextToken returns TYPE int" {
     const input = "int";
     var l = New(input);
 
     const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenType.SCALAR_TYPE);
+    try std.testing.expect(tok.token_type == token.TokenType.TYPE);
     try std.testing.expect(std.mem.eql(u8, "int", tok.literal));
 }
 
-test "nextToken returns SCALAR_TYPE float" {
+test "nextToken returns TYPE float" {
     const input = "float";
     var l = New(input);
 
     const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenType.SCALAR_TYPE);
+    try std.testing.expect(tok.token_type == token.TokenType.TYPE);
     try std.testing.expect(std.mem.eql(u8, "float", tok.literal));
 }
 
-test "nextToken returns SCALAR_TYPE string" {
+test "nextToken returns TYPE string" {
     const input = "string";
     var l = New(input);
 
     const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenType.SCALAR_TYPE);
+    try std.testing.expect(tok.token_type == token.TokenType.TYPE);
     try std.testing.expect(std.mem.eql(u8, "string", tok.literal));
 }
 
-test "nextToken returns SCALAR_TYPE bool" {
+test "nextToken returns TYPE bool" {
     const input = "bool";
     var l = New(input);
 
     const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenType.SCALAR_TYPE);
+    try std.testing.expect(tok.token_type == token.TokenType.TYPE);
     try std.testing.expect(std.mem.eql(u8, "bool", tok.literal));
 }
 
@@ -710,6 +752,24 @@ test "nextToken returns STRING" {
     try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.literal));
 }
 
+test "nextToken returns LEFT_BRACKET" {
+    const input = "[";
+    var l = New(input);
+
+    const tok = l.nextToken();
+    try std.testing.expect(tok.token_type == token.TokenType.LEFT_BRACKET);
+    try std.testing.expect(std.mem.eql(u8, "[", tok.literal));
+}
+
+test "nextToken returns RIGHT_BRACKET" {
+    const input = "]";
+    var l = New(input);
+
+    const tok = l.nextToken();
+    try std.testing.expect(tok.token_type == token.TokenType.RIGHT_BRACKET);
+    try std.testing.expect(std.mem.eql(u8, "]", tok.literal));
+}
+
 test "nextToken single line" {
     const TestCase = struct {
         expected_type: token.TokenType,
@@ -719,11 +779,11 @@ test "nextToken single line" {
 
     // Define your test cases array
     const test_cases = [_]TestCase{
-        TestCase{ .expected_type = token.TokenType.PHP_OPEN_TAG, .expected_literal = "<?php" },
+        TestCase{ .expected_type = token.TokenType.OPEN_TAG, .expected_literal = "<?php" },
         TestCase{ .expected_type = token.TokenType.ECHO, .expected_literal = "echo" },
         TestCase{ .expected_type = token.TokenType.INTEGER, .expected_literal = "10" },
         TestCase{ .expected_type = token.TokenType.SEMICOLON, .expected_literal = ";" },
-        TestCase{ .expected_type = token.TokenType.PHP_CLOSE_TAG, .expected_literal = "?>" },
+        TestCase{ .expected_type = token.TokenType.CLOSE_TAG, .expected_literal = "?>" },
         TestCase{ .expected_type = token.TokenType.EOF, .expected_literal = "EOF" },
         // Add more test cases as needed
     };
