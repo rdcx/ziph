@@ -8,10 +8,12 @@ pub fn main() !void {
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
-    const flags = try flag.parse(alloc);
+    var flags = try flag.parse(alloc);
 
-    for (flags) |f| {
-        try stdout.print("Flag: {s} Value: {s}\n", .{ f.name, f.value });
+    const file = flags.getFlag("--file");
+
+    if (file) |f| {
+        try stdout.print("File: {s}\n", .{f});
     }
 
     // try repl.start();
