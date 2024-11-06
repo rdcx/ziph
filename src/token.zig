@@ -8,10 +8,18 @@ pub const TokenType = enum {
     PHP_CLOSE_TAG,
     IDENT,
     INTEGER,
+    STRING,
     ECHO,
     FUNCTION,
     LEFT_PAREN,
     RIGHT_PAREN,
+    LEFT_BRACE,
+    RIGHT_BRACE,
+    PLUS,
+    MINUS,
+    ASSIGN,
+    COMMA,
+    SCALAR_TYPE,
     SEMICOLON,
     VARIABLE,
 };
@@ -22,10 +30,19 @@ pub const Keyword = struct {
 };
 
 pub const Keywords = [_]Keyword{
+    // Tags
     Keyword{ .name = "<?php", .token_type = TokenType.PHP_OPEN_TAG },
     Keyword{ .name = "<?", .token_type = TokenType.PHP_SHORT_OPEN_TAG },
     Keyword{ .name = "?>", .token_type = TokenType.PHP_CLOSE_TAG },
+
+    // Types
+    Keyword{ .name = "int", .token_type = TokenType.SCALAR_TYPE },
+    Keyword{ .name = "float", .token_type = TokenType.SCALAR_TYPE },
+    Keyword{ .name = "string", .token_type = TokenType.SCALAR_TYPE },
+    Keyword{ .name = "bool", .token_type = TokenType.SCALAR_TYPE },
+
     Keyword{ .name = "function", .token_type = TokenType.FUNCTION },
+
     Keyword{ .name = "echo", .token_type = TokenType.ECHO },
 };
 
@@ -45,6 +62,12 @@ test "Test getKeyword" {
     try std.testing.expect(getKeyword("?>") == TokenType.PHP_CLOSE_TAG);
     try std.testing.expect(getKeyword("echo") == TokenType.ECHO);
     try std.testing.expect(getKeyword("function") == TokenType.FUNCTION);
+
+    try std.testing.expect(getKeyword("int") == TokenType.SCALAR_TYPE);
+    try std.testing.expect(getKeyword("float") == TokenType.SCALAR_TYPE);
+    try std.testing.expect(getKeyword("string") == TokenType.SCALAR_TYPE);
+    try std.testing.expect(getKeyword("bool") == TokenType.SCALAR_TYPE);
+
     try std.testing.expect(getKeyword("invalid") == null);
 }
 
