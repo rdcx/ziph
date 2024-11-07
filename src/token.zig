@@ -15,6 +15,9 @@ pub const TokenType = enum {
     LEFT_BRACKET,
     RIGHT_BRACKET,
 
+    // Delimiters
+    COMMA,
+
     //
     EOF,
 
@@ -30,6 +33,7 @@ pub const TokenType = enum {
 
     // Keywords
     FUNCTION,
+    FN,
     CLASS,
     INTERFACE,
     TRAIT,
@@ -81,7 +85,6 @@ pub const TokenType = enum {
     PLUS,
     MINUS,
     ASSIGN,
-    COMMA,
 
     // Special operators
     COLON,
@@ -118,11 +121,13 @@ pub const Keywords = [_]Keyword{
     Keyword{ .name = "array", .token_type = TokenType.TYPE },
 
     Keyword{ .name = "class", .token_type = TokenType.CLASS },
+    Keyword{ .name = "extends", .token_type = TokenType.EXTENDS },
     Keyword{ .name = "interface", .token_type = TokenType.INTERFACE },
     Keyword{ .name = "trait", .token_type = TokenType.TRAIT },
     Keyword{ .name = "namespace", .token_type = TokenType.NAMESPACE },
     Keyword{ .name = "use", .token_type = TokenType.USE },
     Keyword{ .name = "function", .token_type = TokenType.FUNCTION },
+    Keyword{ .name = "fn", .token_type = TokenType.FN },
     Keyword{ .name = "return", .token_type = TokenType.RETURN },
     Keyword{ .name = "if", .token_type = TokenType.IF },
     Keyword{ .name = "else", .token_type = TokenType.ELSE },
@@ -169,6 +174,7 @@ test "getKeyword" {
     try std.testing.expect(getKeyword("?>") == TokenType.CLOSE_TAG);
     try std.testing.expect(getKeyword("echo") == TokenType.ECHO);
     try std.testing.expect(getKeyword("function") == TokenType.FUNCTION);
+    try std.testing.expect(getKeyword("fn") == TokenType.FN);
 
     try std.testing.expect(getKeyword("int") == TokenType.TYPE);
     try std.testing.expect(getKeyword("float") == TokenType.TYPE);
@@ -182,6 +188,7 @@ test "getKeyword" {
     try std.testing.expect(getKeyword("array") == TokenType.TYPE);
 
     try std.testing.expect(getKeyword("class") == TokenType.CLASS);
+    try std.testing.expect(getKeyword("extends") == TokenType.EXTENDS);
     try std.testing.expect(getKeyword("interface") == TokenType.INTERFACE);
     try std.testing.expect(getKeyword("trait") == TokenType.TRAIT);
     try std.testing.expect(getKeyword("namespace") == TokenType.NAMESPACE);

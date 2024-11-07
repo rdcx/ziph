@@ -111,6 +111,9 @@ const Lexer = struct {
         tok = self.detectColon();
         if (tok != null) return tok.?;
 
+        tok = self.detectComma();
+        if (tok != null) return tok.?;
+
         tok = self.detectEOF();
         if (tok != null) return tok.?;
 
@@ -540,6 +543,24 @@ const Lexer = struct {
         try std.testing.expect(std.mem.eql(u8, "=>", tok.literal));
     }
 
+    fn detectComma(self: *Lexer) ?token.Token {
+        if (self.ch == ',') {
+            const tok = token.newToken(token.TokenType.COMMA, ",");
+            self.readChar();
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectComma returns COMMA token" {
+        const input = ",";
+        var l = New(input);
+
+        const tok = l.detectComma().?;
+        try std.testing.expect(tok.token_type == token.TokenType.COMMA);
+        try std.testing.expect(std.mem.eql(u8, ",", tok.literal));
+    }
+
     fn isObjectOperator(self: *Lexer) bool {
         if (self.input.len < self.read_position + 1) {
             return false;
@@ -936,6 +957,15 @@ test "nextToken returns DOUBLE_ARROW" {
     const tok = l.nextToken();
     try std.testing.expect(tok.token_type == token.TokenType.DOUBLE_ARROW);
     try std.testing.expect(std.mem.eql(u8, "=>", tok.literal));
+}
+
+test "nextToken returns COMMA" {
+    const input = ",";
+    var l = New(input);
+
+    const tok = l.nextToken();
+    try std.testing.expect(tok.token_type == token.TokenType.COMMA);
+    try std.testing.expect(std.mem.eql(u8, ",", tok.literal));
 }
 
 test "nextToken single line" {
