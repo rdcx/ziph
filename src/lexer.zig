@@ -94,7 +94,15 @@ const Lexer = struct {
         tok = self.detectPlus();
         if (tok != null) return tok.?;
 
+        // Detect object operator before minus operator
+        tok = self.detectObjectOperator();
+        if (tok != null) return tok.?;
+
         tok = self.detectMinus();
+        if (tok != null) return tok.?;
+
+        // Detect double arrow before assign operator
+        tok = self.detectDoubleArrow();
         if (tok != null) return tok.?;
 
         tok = self.detectAssign();
@@ -393,6 +401,17 @@ const Lexer = struct {
             self.readChar();
             return token.newToken(token.TokenType.STRING, str);
         }
+
+        if (self.ch == '\'') {
+            self.readChar();
+            const position = self.position;
+            while (self.ch != '\'') {
+                self.readChar();
+            }
+            const str = self.input[position..self.position];
+            self.readChar();
+            return token.newToken(token.TokenType.STRING_SINGLE_QUOTE, str);
+        }
         return null;
     }
 
@@ -402,6 +421,15 @@ const Lexer = struct {
 
         const tok = l.detectString().?;
         try std.testing.expect(tok.token_type == token.TokenType.STRING);
+        try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.literal));
+    }
+
+    test "detectString returns STRING_SINGLE_QUOTE token" {
+        const input = "'Hello, World!'";
+        var l = New(input);
+
+        const tok = l.detectString().?;
+        try std.testing.expect(tok.token_type == token.TokenType.STRING_SINGLE_QUOTE);
         try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.literal));
     }
 
@@ -471,6 +499,67 @@ const Lexer = struct {
         const tok = l.detectColon().?;
         try std.testing.expect(tok.token_type == token.TokenType.DOUBLE_COLON);
         try std.testing.expect(std.mem.eql(u8, "::", tok.literal));
+    }
+
+    fn detectObjectOperator(self: *Lexer) ?token.Token {
+        if (self.isObjectOperator()) {
+            const tok = token.newToken(token.TokenType.OBJECT_OPERATOR, "->");
+            self.jumpLiteral("->");
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectObjectOperator returns OBJECT_OPERATOR token" {
+        const input = "->";
+        var l = New(input);
+
+        const tok = l.detectObjectOperator().?;
+        try std.testing.expect(tok.token_type == token.TokenType.OBJECT_OPERATOR);
+        try std.testing.expect(std.mem.eql(u8, "->", tok.literal));
+    }
+
+    fn detectDoubleArrow(self: *Lexer) ?token.Token {
+        if (self.input.len < self.read_position + 1) {
+            return null;
+        }
+        if (self.ch == '=' and self.input[self.read_position] == '>') {
+            const tok = token.newToken(token.TokenType.DOUBLE_ARROW, "=>");
+            self.jumpLiteral("=>");
+            return tok;
+        }
+        return null;
+    }
+
+    test "detectDoubleArrow returns DOUBLE_ARROW token" {
+        const input = "=>";
+        var l = New(input);
+
+        const tok = l.detectDoubleArrow().?;
+        try std.testing.expect(tok.token_type == token.TokenType.DOUBLE_ARROW);
+        try std.testing.expect(std.mem.eql(u8, "=>", tok.literal));
+    }
+
+    fn isObjectOperator(self: *Lexer) bool {
+        if (self.input.len < self.read_position + 1) {
+            return false;
+        }
+
+        return self.ch == '-' and self.input[self.read_position] == '>';
+    }
+
+    test "isObjectOperator returns true" {
+        const input = "->";
+        var l = New(input);
+
+        try std.testing.expect(l.isObjectOperator());
+    }
+
+    test "isObjectOperator returns false" {
+        const input = "-";
+        var l = New(input);
+
+        try std.testing.expect(!l.isObjectOperator());
     }
 
     fn isOpenTag(self: *Lexer) bool {
@@ -829,6 +918,24 @@ test "nextToken returns DOUBLE_COLON" {
     const tok = l.nextToken();
     try std.testing.expect(tok.token_type == token.TokenType.DOUBLE_COLON);
     try std.testing.expect(std.mem.eql(u8, "::", tok.literal));
+}
+
+test "nextToken returns OBJECT_OPERATOR" {
+    const input = "->";
+    var l = New(input);
+
+    const tok = l.nextToken();
+    try std.testing.expect(tok.token_type == token.TokenType.OBJECT_OPERATOR);
+    try std.testing.expect(std.mem.eql(u8, "->", tok.literal));
+}
+
+test "nextToken returns DOUBLE_ARROW" {
+    const input = "=>";
+    var l = New(input);
+
+    const tok = l.nextToken();
+    try std.testing.expect(tok.token_type == token.TokenType.DOUBLE_ARROW);
+    try std.testing.expect(std.mem.eql(u8, "=>", tok.literal));
 }
 
 test "nextToken single line" {

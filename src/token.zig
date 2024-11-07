@@ -23,6 +23,7 @@ pub const TokenType = enum {
     IDENT,
     INTEGER,
     STRING,
+    STRING_SINGLE_QUOTE,
     FLOAT,
     BOOL,
     TYPE,
