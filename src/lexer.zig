@@ -196,10 +196,88 @@ const Lexer = struct {
         tok = self.detectComma();
         if (tok != null) return tok.?;
 
+        tok = self.detectHashSymbol();
+        if (tok != null) return tok.?;
+
+        tok = self.detectLogicalAnd();
+        if (tok != null) return tok.?;
+
+        tok = self.detectLogicalOr();
+        if (tok != null) return tok.?;
+
+        tok = self.detectQuestionMark();
+        if (tok != null) return tok.?;
+
         tok = self.detectEOF();
         if (tok != null) return tok.?;
 
         return token.TokenTag.illegal;
+    }
+
+    fn detectQuestionMark(self: *Lexer) ?token.Token {
+        if (self.ch == '?') {
+            self.readChar();
+            return token.TokenTag.question_mark;
+        }
+        return null;
+    }
+
+    test "detectQuestionMark returns question_mark token" {
+        const input = "?";
+        var l = new(input);
+
+        const tok = l.detectQuestionMark().?;
+        try std.testing.expect(tok == token.TokenTag.question_mark);
+    }
+
+    fn detectLogicalAnd(self: *Lexer) ?token.Token {
+        if (self.ch == '&' and self.peekChar() == '&') {
+            self.readChar();
+            self.readChar();
+            return token.TokenTag.logical_and;
+        }
+        return null;
+    }
+
+    test "detectLogicalAnd returns logical_and token" {
+        const input = "&&";
+        var l = new(input);
+
+        const tok = l.detectLogicalAnd().?;
+        try std.testing.expect(tok == token.TokenTag.logical_and);
+    }
+
+    fn detectLogicalOr(self: *Lexer) ?token.Token {
+        if (self.ch == '|' and self.peekChar() == '|') {
+            self.readChar();
+            self.readChar();
+            return token.TokenTag.logical_or;
+        }
+        return null;
+    }
+
+    test "detectLogicalOr returns logical_or token" {
+        const input = "||";
+        var l = new(input);
+
+        const tok = l.detectLogicalOr().?;
+        try std.testing.expect(tok == token.TokenTag.logical_or);
+    }
+
+    fn detectHashSymbol(self: *Lexer) ?token.Token {
+        if (self.ch == '#') {
+            self.readChar();
+            return token.TokenTag.hash_symbol;
+        }
+        return null;
+    }
+
+    test "detectHashSymbol returns hash_symbol token" {
+        const input = "#";
+        var l = new(input);
+
+        const tok = l.detectHashSymbol().?;
+        try std.testing.expect(tok == token.TokenTag.hash_symbol);
     }
 
     fn detectBang(self: *Lexer) ?token.Token {
@@ -370,7 +448,7 @@ const Lexer = struct {
     }
 
     fn detectIdentifier(self: *Lexer) ?token.Token {
-        if (!isLetter(self.ch)) {
+        if (!isLetter(self.ch) and !isBackslash(self.ch)) {
             return null;
         }
 
@@ -393,6 +471,14 @@ const Lexer = struct {
 
         const tok = l.detectIdentifier().?;
         try std.testing.expect(tok == token.TokenTag.function);
+    }
+
+    test "detectIdentifier allows backslash" {
+        const input = "\\SensitivePrameter";
+        var l = new(input);
+
+        const tok = l.detectIdentifier().?;
+        try std.testing.expect(tok == token.TokenTag.ident);
     }
 
     fn detectVariable(self: *Lexer) ?token.Token {
@@ -1332,6 +1418,9 @@ test "PHP lexer" {
         \\ echo $test->add(5, 10);
         \\ echo $test->add(10, 20) !== 30;
         \\ echo !false;
+        \\ function withParameter(string $a, #[\SensitiveParameter] string $b) { }
+        \\ || && 
+        \\ ? :
     ;
 
     var lexer = new(input);
@@ -1425,6 +1514,31 @@ test "PHP lexer" {
     try expectEqual(token.Token.bang, lexer.nextToken());
     try expectEqual(token.Token.false_literal, lexer.nextToken());
     try expectEqual(token.Token.semicolon, lexer.nextToken());
+
+    // Function with attributes
+    try expectEqual(token.Token.function, lexer.nextToken());
+    try expectIdent("withParameter", lexer.nextToken());
+    try expectEqual(token.Token.left_paren, lexer.nextToken());
+    try expectEqual(token.Token.string_t, lexer.nextToken());
+    try expectVariable("a", lexer.nextToken());
+    try expectEqual(token.Token.comma, lexer.nextToken());
+    try expectEqual(token.Token.hash_symbol, lexer.nextToken());
+    try expectEqual(token.Token.left_bracket, lexer.nextToken());
+    try expectIdent("\\SensitiveParameter", lexer.nextToken());
+    try expectEqual(token.Token.right_bracket, lexer.nextToken());
+    try expectEqual(token.Token.string_t, lexer.nextToken());
+    try expectVariable("b", lexer.nextToken());
+    try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.left_brace, lexer.nextToken());
+    try expectEqual(token.Token.right_brace, lexer.nextToken());
+
+    // Logical operators
+    try expectEqual(token.Token.logical_or, lexer.nextToken());
+    try expectEqual(token.Token.logical_and, lexer.nextToken());
+
+    // Ternary operator
+    try expectEqual(token.Token.question_mark, lexer.nextToken());
+    try expectEqual(token.Token.colon, lexer.nextToken());
 
     // End of file
     try expectEqual(token.Token.eof, lexer.nextToken());

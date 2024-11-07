@@ -97,8 +97,11 @@ pub const TokenTag = enum {
     not_equal,
     not_identical,
     bang,
+    logical_and,
+    logical_or,
 
     // Special operators
+    question_mark,
     colon,
     double_colon,
     object_operator,
@@ -106,6 +109,7 @@ pub const TokenTag = enum {
     coalesce,
     double_arrow,
     elipsis,
+    hash_symbol,
 };
 
 pub const Token = union(TokenTag) {
@@ -208,8 +212,11 @@ pub const Token = union(TokenTag) {
     not_equal: void,
     not_identical: void,
     bang: void,
+    logical_and: void,
+    logical_or: void,
 
     // Special operators
+    question_mark: void,
     colon: void,
     double_colon: void,
     object_operator: void,
@@ -217,4 +224,5 @@ pub const Token = union(TokenTag) {
     coalesce: void,
     double_arrow: void,
     elipsis: void,
+    hash_symbol: void,
 };
