@@ -820,6 +820,13 @@ fn isRequireOnce(ident: []const u8) bool {
 }
 
 fn lookupIdent(ident: []const u8) token.Token {
+    // Type system checks
+    if (isInteger(ident)) return token.TokenTag.integer_t;
+    if (isString(ident)) return token.TokenTag.string_t;
+    if (isFloat(ident)) return token.TokenTag.float_t;
+    if (isBool(ident)) return token.TokenTag.bool_t;
+    if (isType(ident)) return token.TokenTag.type_;
+
     if (isFunction(ident)) return token.TokenTag.function;
     if (isFn(ident)) return token.TokenTag.fn_;
     if (isClass(ident)) return token.TokenTag.class;
@@ -873,7 +880,62 @@ fn lookupIdent(ident: []const u8) token.Token {
 }
 
 test "lookupIdent" {
+    // Type system tests
+    try std.testing.expect(lookupIdent("integer") == token.TokenTag.integer_t);
+    try std.testing.expect(lookupIdent("string") == token.TokenTag.string_t);
+    try std.testing.expect(lookupIdent("float") == token.TokenTag.float_t);
+    try std.testing.expect(lookupIdent("bool") == token.TokenTag.bool_t);
+    try std.testing.expect(lookupIdent("type") == token.TokenTag.type_);
+
+    // Keyword tests
     try std.testing.expect(lookupIdent("function") == token.TokenTag.function);
+    try std.testing.expect(lookupIdent("fn") == token.TokenTag.fn_);
+    try std.testing.expect(lookupIdent("class") == token.TokenTag.class);
+    try std.testing.expect(lookupIdent("interface") == token.TokenTag.interface);
+    try std.testing.expect(lookupIdent("trait") == token.TokenTag.trait);
+    try std.testing.expect(lookupIdent("namespace") == token.TokenTag.namespace);
+    try std.testing.expect(lookupIdent("use") == token.TokenTag.use);
+    try std.testing.expect(lookupIdent("const") == token.TokenTag.const_);
+    try std.testing.expect(lookupIdent("var") == token.TokenTag.var_);
+    try std.testing.expect(lookupIdent("public") == token.TokenTag.public);
+    try std.testing.expect(lookupIdent("protected") == token.TokenTag.protected);
+    try std.testing.expect(lookupIdent("private") == token.TokenTag.private);
+    try std.testing.expect(lookupIdent("static") == token.TokenTag.static);
+    try std.testing.expect(lookupIdent("abstract") == token.TokenTag.abstract);
+    try std.testing.expect(lookupIdent("final") == token.TokenTag.final);
+    try std.testing.expect(lookupIdent("extends") == token.TokenTag.extends);
+    try std.testing.expect(lookupIdent("implements") == token.TokenTag.implements);
+    try std.testing.expect(lookupIdent("return") == token.TokenTag.return_);
+    try std.testing.expect(lookupIdent("if") == token.TokenTag.if_);
+    try std.testing.expect(lookupIdent("else") == token.TokenTag.else_);
+    try std.testing.expect(lookupIdent("elseif") == token.TokenTag.elseif);
+    try std.testing.expect(lookupIdent("while") == token.TokenTag.while_);
+    try std.testing.expect(lookupIdent("do") == token.TokenTag.do_);
+    try std.testing.expect(lookupIdent("for") == token.TokenTag.for_);
+    try std.testing.expect(lookupIdent("foreach") == token.TokenTag.foreach);
+    try std.testing.expect(lookupIdent("switch") == token.TokenTag.switch_);
+    try std.testing.expect(lookupIdent("case") == token.TokenTag.case);
+    try std.testing.expect(lookupIdent("default") == token.TokenTag.default);
+    try std.testing.expect(lookupIdent("break") == token.TokenTag.break_);
+    try std.testing.expect(lookupIdent("match") == token.TokenTag.match);
+    try std.testing.expect(lookupIdent("continue") == token.TokenTag.continue_);
+    try std.testing.expect(lookupIdent("goto") == token.TokenTag.goto);
+    try std.testing.expect(lookupIdent("throw") == token.TokenTag.throw);
+    try std.testing.expect(lookupIdent("try") == token.TokenTag.try_);
+    try std.testing.expect(lookupIdent("catch") == token.TokenTag.catch_);
+    try std.testing.expect(lookupIdent("finally") == token.TokenTag.finally);
+    try std.testing.expect(lookupIdent("yield") == token.TokenTag.yield);
+    try std.testing.expect(lookupIdent("as") == token.TokenTag.as);
+    try std.testing.expect(lookupIdent("instanceof") == token.TokenTag.instanceof);
+    try std.testing.expect(lookupIdent("insteadof") == token.TokenTag.insteadof);
+    try std.testing.expect(lookupIdent("global") == token.TokenTag.global);
+    try std.testing.expect(lookupIdent("declare") == token.TokenTag.declare);
+    try std.testing.expect(lookupIdent("echo") == token.TokenTag.echo);
+    try std.testing.expect(lookupIdent("print") == token.TokenTag.print);
+    try std.testing.expect(lookupIdent("include") == token.TokenTag.include);
+    try std.testing.expect(lookupIdent("include_once") == token.TokenTag.include_once);
+    try std.testing.expect(lookupIdent("require") == token.TokenTag.require);
+    try std.testing.expect(lookupIdent("require_once") == token.TokenTag.require_once);
 }
 
 test "Test jumpLiteral" {
