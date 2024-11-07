@@ -25,7 +25,21 @@ const Lexer = struct {
         self.read_position += 1;
     }
 
-    pub fn readIdentifier(self: *Lexer) []const u8 {
+    fn peekChar(self: *Lexer) u8 {
+        if (self.read_position >= self.input.len) {
+            return 0;
+        }
+        return self.input[self.read_position];
+    }
+
+    test "peekChar returns next character" {
+        const input = "Hello";
+        var l = new(input);
+
+        try expect(l.peekChar() == 'e');
+    }
+
+    fn readIdentifier(self: *Lexer) []const u8 {
         const position = self.position;
         while (isLetter(self.ch) or isBackslash(self.ch) or (self.position != position and isDigit(self.ch))) {
             self.readChar();
@@ -33,10 +47,44 @@ const Lexer = struct {
         return self.input[position..self.position];
     }
 
-    pub fn skipWhitespace(self: *Lexer) void {
+    fn skipWhitespace(self: *Lexer) void {
         while (self.ch == ' ' or self.ch == '\t' or self.ch == '\n' or self.ch == '\r') {
             self.readChar();
         }
+    }
+
+    fn skipComment(self: *Lexer) void {
+        while (self.ch != '\n') {
+            self.readChar();
+        }
+        self.readChar();
+    }
+
+    test "skipComment skips single-line comments" {
+        const input = "// This is a comment\n";
+        var l = new(input);
+
+        l.skipComment();
+        try expect(l.ch == 0);
+    }
+
+    fn skipMultilineComment(self: *Lexer) void {
+        while (true) {
+            if (self.ch == '*' and self.peekChar() == '/') {
+                self.readChar();
+                self.readChar();
+                break;
+            }
+            self.readChar();
+        }
+    }
+
+    test "skipMultilineComment skips multi-line comments" {
+        const input = "/**\n     * Assert that a condition is true.\n     */";
+        var l = new(input);
+
+        l.skipMultilineComment();
+        try expect(l.ch == 0);
     }
 
     pub fn jumpLiteral(self: *Lexer, literal: []const u8) void {
@@ -55,6 +103,17 @@ const Lexer = struct {
 
     pub fn nextToken(self: *Lexer) token.Token {
         self.skipWhitespace();
+        if (self.ch == '/' and self.peekChar() == '/') {
+            self.skipComment();
+
+            return self.nextToken();
+        }
+
+        if (self.ch == '/' and self.peekChar() == '*') {
+            self.skipMultilineComment();
+
+            return self.nextToken();
+        }
 
         var tok = self.detectSemicolon();
         if (tok != null) return tok.?;
