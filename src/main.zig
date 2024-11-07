@@ -34,7 +34,9 @@ pub fn main() !void {
                 break;
             }
         }
+
+        return;
     }
 
-    // try repl.start();
+    try repl.start();
 }

@@ -23,7 +23,7 @@ const Lexer = struct {
 
     pub fn readIdentifier(self: *Lexer) []const u8 {
         const position = self.position;
-        while (isLetter(self.ch)) {
+        while (isLetter(self.ch) or isBackslash(self.ch) or (self.position != position and isDigit(self.ch))) {
             self.readChar();
         }
         return self.input[position..self.position];
@@ -98,6 +98,9 @@ const Lexer = struct {
         if (tok != null) return tok.?;
 
         tok = self.detectAssign();
+        if (tok != null) return tok.?;
+
+        tok = self.detectColon();
         if (tok != null) return tok.?;
 
         tok = self.detectEOF();
@@ -438,6 +441,38 @@ const Lexer = struct {
         try std.testing.expect(std.mem.eql(u8, "]", tok.literal));
     }
 
+    fn detectColon(self: *Lexer) ?token.Token {
+        if (self.ch == ':') {
+            self.readChar();
+            if (self.ch == ':') {
+                const tok = token.newToken(token.TokenType.DOUBLE_COLON, "::");
+                self.readChar();
+                return tok;
+            }
+
+            return token.newToken(token.TokenType.COLON, ":");
+        }
+        return null;
+    }
+
+    test "detectColon returns COLON token" {
+        const input = ":";
+        var l = New(input);
+
+        const tok = l.detectColon().?;
+        try std.testing.expect(tok.token_type == token.TokenType.COLON);
+        try std.testing.expect(std.mem.eql(u8, ":", tok.literal));
+    }
+
+    test "detectColon returns DOUBLE_COLON token" {
+        const input = "::";
+        var l = New(input);
+
+        const tok = l.detectColon().?;
+        try std.testing.expect(tok.token_type == token.TokenType.DOUBLE_COLON);
+        try std.testing.expect(std.mem.eql(u8, "::", tok.literal));
+    }
+
     fn isOpenTag(self: *Lexer) bool {
         const expected = "<?php";
 
@@ -545,6 +580,14 @@ test "readIdentifier returns person" {
 
     const ident = l.readIdentifier();
     try std.testing.expect(std.mem.eql(u8, "person", ident));
+}
+
+test "readIdentifier returns App\\Person" {
+    const input = "App\\Person";
+    var l = New(input);
+
+    const ident = l.readIdentifier();
+    try std.testing.expect(std.mem.eql(u8, "App\\Person", ident));
 }
 
 test "nextToken skips whitespace" {
@@ -770,6 +813,24 @@ test "nextToken returns RIGHT_BRACKET" {
     try std.testing.expect(std.mem.eql(u8, "]", tok.literal));
 }
 
+test "nextToken returns COLON" {
+    const input = ":";
+    var l = New(input);
+
+    const tok = l.nextToken();
+    try std.testing.expect(tok.token_type == token.TokenType.COLON);
+    try std.testing.expect(std.mem.eql(u8, ":", tok.literal));
+}
+
+test "nextToken returns DOUBLE_COLON" {
+    const input = "::";
+    var l = New(input);
+
+    const tok = l.nextToken();
+    try std.testing.expect(tok.token_type == token.TokenType.DOUBLE_COLON);
+    try std.testing.expect(std.mem.eql(u8, "::", tok.literal));
+}
+
 test "nextToken single line" {
     const TestCase = struct {
         expected_type: token.TokenType,
@@ -845,4 +906,16 @@ test "Test isDigit" {
     try std.testing.expect(!isDigit('Z'));
     try std.testing.expect(!isDigit('_'));
     try std.testing.expect(!isDigit(';'));
+}
+
+pub fn isBackslash(ch: u8) bool {
+    return ch == '\\';
+}
+
+test "Test isBackslash" {
+    try std.testing.expect(isBackslash('\\'));
+    try std.testing.expect(!isBackslash('a'));
+    try std.testing.expect(!isBackslash('Z'));
+    try std.testing.expect(!isBackslash('_'));
+    try std.testing.expect(!isBackslash(';'));
 }

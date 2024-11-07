@@ -57,7 +57,6 @@ pub fn parse(alloc: std.mem.Allocator) !Result {
     var i: u8 = 0;
     for (args) |arg| {
         vals[i] = arg;
-        std.debug.print("Arg: {s}\n", .{arg});
         i += 1;
     }
 
