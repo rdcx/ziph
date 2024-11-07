@@ -643,6 +643,10 @@ fn isClass(ident: []const u8) bool {
     return std.mem.eql(u8, "class", ident);
 }
 
+fn isNew(ident: []const u8) bool {
+    return std.mem.eql(u8, "new", ident);
+}
+
 fn isInterface(ident: []const u8) bool {
     return std.mem.eql(u8, "interface", ident);
 }
@@ -834,6 +838,7 @@ fn lookupIdent(ident: []const u8) token.Token {
     if (isFunction(ident)) return token.TokenTag.function;
     if (isFn(ident)) return token.TokenTag.fn_;
     if (isClass(ident)) return token.TokenTag.class;
+    if (isNew(ident)) return token.TokenTag.new;
     if (isInterface(ident)) return token.TokenTag.interface;
     if (isTrait(ident)) return token.TokenTag.trait;
     if (isNamespace(ident)) return token.TokenTag.namespace;
@@ -1105,7 +1110,7 @@ test "Test isBackslash" {
 // test utils
 fn expectStringInnerToken(expected: []const u8, actual: token.Token) !void {
     switch (actual) {
-        token.Token.ident, token.Token.integer_literal, token.Token.string_double_quote_literal, token.Token.string_single_quote_literal => |value| try expectEqualStrings(expected, value),
+        token.Token.ident, token.Token.variable, token.Token.integer_literal, token.Token.string_double_quote_literal, token.Token.string_single_quote_literal => |value| try expectEqualStrings(expected, value),
         else => unreachable,
     }
 }
@@ -1201,27 +1206,27 @@ test "PHP lexer" {
     // Close class
     try expectEqual(token.Token.right_brace, lexer.nextToken());
 
-    // // Variable and instantiation
-    // try expectVariable("test", lexer.nextToken());
-    // try expectEqual(token.Token.assign, lexer.nextToken());
-    // try expectEqual(token.Token.new, lexer.nextToken());
-    // try expectIdent("Test", lexer.nextToken());
-    // try expectEqual(token.Token.left_paren, lexer.nextToken());
-    // try expectEqual(token.Token.right_paren, lexer.nextToken());
-    // try expectEqual(token.Token.semicolon, lexer.nextToken());
+    // Variable and instantiation
+    try expectVariable("test", lexer.nextToken());
+    try expectEqual(token.Token.assign, lexer.nextToken());
+    try expectEqual(token.Token.new, lexer.nextToken());
+    try expectIdent("Test", lexer.nextToken());
+    try expectEqual(token.Token.left_paren, lexer.nextToken());
+    try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.semicolon, lexer.nextToken());
 
-    // // Function call with arguments
-    // try expectEqual(token.Token.echo, lexer.nextToken());
-    // try expectVariable("test", lexer.nextToken());
-    // try expectEqual(token.Token.object_operator, lexer.nextToken());
-    // try expectIdent("add", lexer.nextToken());
-    // try expectEqual(token.Token.left_paren, lexer.nextToken());
-    // try expectInt("5", lexer.nextToken());
-    // try expectEqual(token.Token.comma, lexer.nextToken());
-    // try expectInt("10", lexer.nextToken());
-    // try expectEqual(token.Token.right_paren, lexer.nextToken());
-    // try expectEqual(token.Token.semicolon, lexer.nextToken());
+    // Function call with arguments
+    try expectEqual(token.Token.echo, lexer.nextToken());
+    try expectVariable("test", lexer.nextToken());
+    try expectEqual(token.Token.object_operator, lexer.nextToken());
+    try expectIdent("add", lexer.nextToken());
+    try expectEqual(token.Token.left_paren, lexer.nextToken());
+    try expectInt("5", lexer.nextToken());
+    try expectEqual(token.Token.comma, lexer.nextToken());
+    try expectInt("10", lexer.nextToken());
+    try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.semicolon, lexer.nextToken());
 
-    // // End of file
-    // try expectEqual(token.Token.eof, lexer.nextToken());
+    // End of file
+    try expectEqual(token.Token.eof, lexer.nextToken());
 }
