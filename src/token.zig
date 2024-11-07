@@ -1,253 +1,203 @@
-const std = @import("std");
-
-pub const TokenType = enum {
-    // Control Symbols
-    OPEN_TAG,
-    OPEN_TAG_WITH_ECHO,
-    SHORT_OPEN_TAG,
-    CLOSE_TAG,
-    LEFT_PAREN,
-    RIGHT_PAREN,
-    LEFT_BRACE,
-    RIGHT_BRACE,
-    SEMICOLON,
-    ILLEGAL,
-    LEFT_BRACKET,
-    RIGHT_BRACKET,
+pub const TokenTag = enum {
+    // Control symbols
+    open_tag,
+    open_tag_with_echo,
+    short_open_tag,
+    close_tag,
+    left_paren,
+    right_paren,
+    left_brace,
+    right_brace,
+    semicolon,
+    illegal,
+    left_bracket,
+    right_bracket,
 
     // Delimiters
-    COMMA,
+    comma,
 
-    //
-    EOF,
+    // End of file
+    eof,
+
+    // Literals
+    string_single_quote_literal,
+    string_double_quote_literal,
+    integer_literal,
+    float_literal,
+    bool_literal,
 
     // Identifiers and types
-    VARIABLE,
-    IDENT,
-    INTEGER,
-    STRING,
-    STRING_SINGLE_QUOTE,
-    FLOAT,
-    BOOL,
-    TYPE,
+    variable,
+    ident,
+    integer_t,
+    string_t,
+    float_t,
+    bool_t,
+    type_,
 
     // Keywords
-    FUNCTION,
-    FN,
-    CLASS,
-    INTERFACE,
-    TRAIT,
-    NAMESPACE,
-    USE,
-    CONST,
-    VAR,
-    PUBLIC,
-    PROTECTED,
-    PRIVATE,
-    STATIC,
-    ABSTRACT,
-    FINAL,
-    EXTENDS,
-    IMPLEMENTS,
-    RETURN,
-    IF,
-    ELSE,
-    ELSEIF,
-    WHILE,
-    DO,
-    FOR,
-    FOREACH,
-    SWITCH,
-    CASE,
-    DEFAULT,
-    BREAK,
-    MATCH,
-    CONTINUE,
-    GOTO,
-    THROW,
-    TRY,
-    CATCH,
-    FINALLY,
-    YIELD,
-    AS,
-    INSTANCEOF,
-    INSTEADOF,
-    GLOBAL,
-    DECLARE,
-    ECHO,
-    PRINT,
-    INCLUDE,
-    INCLUDE_ONCE,
-    REQUIRE,
-    REQUIRE_ONCE,
+    function,
+    fn_,
+    class,
+    interface,
+    trait,
+    namespace,
+    use,
+    const_,
+    var_,
+    public,
+    protected,
+    private,
+    static,
+    abstract,
+    final,
+    extends,
+    implements,
+    return_,
+    if_,
+    else_,
+    elseif,
+    while_,
+    do_,
+    for_,
+    foreach,
+    switch_,
+    case,
+    default,
+    break_,
+    match,
+    continue_,
+    goto,
+    throw,
+    try_,
+    catch_,
+    finally,
+    yield,
+    as,
+    instanceof,
+    insteadof,
+    global,
+    declare,
+    echo,
+    print,
+    include,
+    include_once,
+    require,
+    require_once,
 
     // Operators
-    PLUS,
-    MINUS,
-    ASSIGN,
+    plus,
+    minus,
+    assign,
 
     // Special operators
-    COLON,
-    DOUBLE_COLON,
-    OBJECT_OPERATOR,
-    NULL_SAFE_OBJECT_OPERATOR,
-    COALESCE,
-    DOUBLE_ARROW,
-    ELIPSIS,
+    colon,
+    double_colon,
+    object_operator,
+    null_safe_object_operator,
+    coalesce,
+    double_arrow,
+    elipsis,
 };
 
-pub const Keyword = struct {
-    name: []const u8,
-    token_type: TokenType,
+pub const Token = union(TokenTag) {
+    // Control symbols
+    open_tag: void,
+    open_tag_with_echo: void,
+    short_open_tag: void,
+    close_tag: void,
+    left_paren: void,
+    right_paren: void,
+    left_brace: void,
+    right_brace: void,
+    semicolon: void,
+    illegal: void,
+    left_bracket: void,
+    right_bracket: void,
+
+    // Delimiters
+    comma: void,
+
+    // End of file
+    eof: void,
+
+    string_single_quote_literal: []const u8,
+    string_double_quote_literal: []const u8,
+    integer_literal: []const u8,
+    float_literal: []const u8,
+    bool_literal: []const u8,
+
+    variable: []const u8,
+    ident: []const u8,
+
+    // Type system
+    integer_t: void,
+    string_t: void,
+    float_t: void,
+    bool_t: void,
+    type_: void,
+
+    // Keywords
+    function: void,
+    fn_: void,
+    class: void,
+    interface: void,
+    trait: void,
+    namespace: void,
+    use: void,
+    const_: void,
+    var_: void,
+    public: void,
+    protected: void,
+    private: void,
+    static: void,
+    abstract: void,
+    final: void,
+    extends: void,
+    implements: void,
+    return_: void,
+    if_: void,
+    else_: void,
+    elseif: void,
+    while_: void,
+    do_: void,
+    for_: void,
+    foreach: void,
+    switch_: void,
+    case: void,
+    default: void,
+    break_: void,
+    match: void,
+    continue_: void,
+    goto: void,
+    throw: void,
+    try_: void,
+    catch_: void,
+    finally: void,
+    yield: void,
+    as: void,
+    instanceof: void,
+    insteadof: void,
+    global: void,
+    declare: void,
+    echo: void,
+    print: void,
+    include: void,
+    include_once: void,
+    require: void,
+    require_once: void,
+
+    // Operators
+    plus: void,
+    minus: void,
+    assign: void,
+
+    // Special operators
+    colon: void,
+    double_colon: void,
+    object_operator: void,
+    null_safe_object_operator: void,
+    coalesce: void,
+    double_arrow: void,
+    elipsis: void,
 };
-
-pub const Keywords = [_]Keyword{
-    // Tags
-    Keyword{ .name = "<?php", .token_type = TokenType.OPEN_TAG },
-    Keyword{ .name = "<?=", .token_type = TokenType.OPEN_TAG_WITH_ECHO },
-    Keyword{ .name = "<?", .token_type = TokenType.SHORT_OPEN_TAG },
-    Keyword{ .name = "?>", .token_type = TokenType.CLOSE_TAG },
-
-    // Types
-    Keyword{ .name = "int", .token_type = TokenType.TYPE },
-    Keyword{ .name = "float", .token_type = TokenType.TYPE },
-    Keyword{ .name = "string", .token_type = TokenType.TYPE },
-    Keyword{ .name = "bool", .token_type = TokenType.TYPE },
-    Keyword{ .name = "callable", .token_type = TokenType.TYPE },
-    Keyword{ .name = "void", .token_type = TokenType.TYPE },
-    Keyword{ .name = "mixed", .token_type = TokenType.TYPE },
-    Keyword{ .name = "iterable", .token_type = TokenType.TYPE },
-    Keyword{ .name = "object", .token_type = TokenType.TYPE },
-    Keyword{ .name = "array", .token_type = TokenType.TYPE },
-
-    // Class Keywords
-    Keyword{ .name = "class", .token_type = TokenType.CLASS },
-    Keyword{ .name = "extends", .token_type = TokenType.EXTENDS },
-    Keyword{ .name = "interface", .token_type = TokenType.INTERFACE },
-    Keyword{ .name = "trait", .token_type = TokenType.TRAIT },
-    Keyword{ .name = "namespace", .token_type = TokenType.NAMESPACE },
-    Keyword{ .name = "use", .token_type = TokenType.USE },
-    Keyword{ .name = "public", .token_type = TokenType.PUBLIC },
-    Keyword{ .name = "protected", .token_type = TokenType.PROTECTED },
-    Keyword{ .name = "private", .token_type = TokenType.PRIVATE },
-    Keyword{ .name = "static", .token_type = TokenType.STATIC },
-    Keyword{ .name = "abstract", .token_type = TokenType.ABSTRACT },
-    Keyword{ .name = "final", .token_type = TokenType.FINAL },
-
-    // Function Keywords
-    Keyword{ .name = "function", .token_type = TokenType.FUNCTION },
-    Keyword{ .name = "return", .token_type = TokenType.RETURN },
-    Keyword{ .name = "fn", .token_type = TokenType.FN },
-
-    // Control Keywords
-    Keyword{ .name = "if", .token_type = TokenType.IF },
-    Keyword{ .name = "else", .token_type = TokenType.ELSE },
-    Keyword{ .name = "elseif", .token_type = TokenType.ELSEIF },
-    Keyword{ .name = "while", .token_type = TokenType.WHILE },
-    Keyword{ .name = "do", .token_type = TokenType.DO },
-    Keyword{ .name = "for", .token_type = TokenType.FOR },
-    Keyword{ .name = "foreach", .token_type = TokenType.FOREACH },
-    Keyword{ .name = "switch", .token_type = TokenType.SWITCH },
-    Keyword{ .name = "case", .token_type = TokenType.CASE },
-    Keyword{ .name = "default", .token_type = TokenType.DEFAULT },
-    Keyword{ .name = "break", .token_type = TokenType.BREAK },
-    Keyword{ .name = "match", .token_type = TokenType.MATCH },
-    Keyword{ .name = "continue", .token_type = TokenType.CONTINUE },
-    Keyword{ .name = "goto", .token_type = TokenType.GOTO },
-    Keyword{ .name = "throw", .token_type = TokenType.THROW },
-    Keyword{ .name = "try", .token_type = TokenType.TRY },
-    Keyword{ .name = "catch", .token_type = TokenType.CATCH },
-    Keyword{ .name = "finally", .token_type = TokenType.FINALLY },
-    Keyword{ .name = "yield", .token_type = TokenType.YIELD },
-    Keyword{ .name = "as", .token_type = TokenType.AS },
-
-    // Special Keywords
-    Keyword{ .name = "instanceof", .token_type = TokenType.INSTANCEOF },
-    Keyword{ .name = "insteadof", .token_type = TokenType.INSTEADOF },
-    Keyword{ .name = "global", .token_type = TokenType.GLOBAL },
-    Keyword{ .name = "declare", .token_type = TokenType.DECLARE },
-
-    // IO Keywords
-    Keyword{ .name = "echo", .token_type = TokenType.ECHO },
-};
-
-pub fn getKeyword(keyword: []const u8) ?TokenType {
-    for (Keywords) |kw| {
-        if (std.mem.eql(u8, kw.name, keyword)) {
-            return kw.token_type;
-        }
-    }
-
-    return null;
-}
-
-test "getKeyword" {
-    try std.testing.expect(getKeyword("<?php") == TokenType.OPEN_TAG);
-    try std.testing.expect(getKeyword("<?=") == TokenType.OPEN_TAG_WITH_ECHO);
-    try std.testing.expect(getKeyword("<?") == TokenType.SHORT_OPEN_TAG);
-    try std.testing.expect(getKeyword("?>") == TokenType.CLOSE_TAG);
-    try std.testing.expect(getKeyword("echo") == TokenType.ECHO);
-    try std.testing.expect(getKeyword("function") == TokenType.FUNCTION);
-    try std.testing.expect(getKeyword("fn") == TokenType.FN);
-
-    try std.testing.expect(getKeyword("int") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("float") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("string") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("bool") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("callable") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("void") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("mixed") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("iterable") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("object") == TokenType.TYPE);
-    try std.testing.expect(getKeyword("array") == TokenType.TYPE);
-
-    try std.testing.expect(getKeyword("class") == TokenType.CLASS);
-    try std.testing.expect(getKeyword("extends") == TokenType.EXTENDS);
-    try std.testing.expect(getKeyword("interface") == TokenType.INTERFACE);
-    try std.testing.expect(getKeyword("trait") == TokenType.TRAIT);
-    try std.testing.expect(getKeyword("namespace") == TokenType.NAMESPACE);
-    try std.testing.expect(getKeyword("use") == TokenType.USE);
-    try std.testing.expect(getKeyword("public") == TokenType.PUBLIC);
-    try std.testing.expect(getKeyword("protected") == TokenType.PROTECTED);
-    try std.testing.expect(getKeyword("private") == TokenType.PRIVATE);
-    try std.testing.expect(getKeyword("static") == TokenType.STATIC);
-    try std.testing.expect(getKeyword("abstract") == TokenType.ABSTRACT);
-    try std.testing.expect(getKeyword("final") == TokenType.FINAL);
-
-    try std.testing.expect(getKeyword("return") == TokenType.RETURN);
-    try std.testing.expect(getKeyword("if") == TokenType.IF);
-    try std.testing.expect(getKeyword("else") == TokenType.ELSE);
-    try std.testing.expect(getKeyword("elseif") == TokenType.ELSEIF);
-    try std.testing.expect(getKeyword("while") == TokenType.WHILE);
-    try std.testing.expect(getKeyword("do") == TokenType.DO);
-    try std.testing.expect(getKeyword("for") == TokenType.FOR);
-    try std.testing.expect(getKeyword("foreach") == TokenType.FOREACH);
-    try std.testing.expect(getKeyword("switch") == TokenType.SWITCH);
-    try std.testing.expect(getKeyword("case") == TokenType.CASE);
-    try std.testing.expect(getKeyword("default") == TokenType.DEFAULT);
-    try std.testing.expect(getKeyword("break") == TokenType.BREAK);
-    try std.testing.expect(getKeyword("continue") == TokenType.CONTINUE);
-    try std.testing.expect(getKeyword("goto") == TokenType.GOTO);
-    try std.testing.expect(getKeyword("throw") == TokenType.THROW);
-    try std.testing.expect(getKeyword("try") == TokenType.TRY);
-    try std.testing.expect(getKeyword("catch") == TokenType.CATCH);
-    try std.testing.expect(getKeyword("finally") == TokenType.FINALLY);
-    try std.testing.expect(getKeyword("yield") == TokenType.YIELD);
-    try std.testing.expect(getKeyword("as") == TokenType.AS);
-    try std.testing.expect(getKeyword("instanceof") == TokenType.INSTANCEOF);
-    try std.testing.expect(getKeyword("insteadof") == TokenType.INSTEADOF);
-    try std.testing.expect(getKeyword("global") == TokenType.GLOBAL);
-    try std.testing.expect(getKeyword("declare") == TokenType.DECLARE);
-
-    try std.testing.expect(getKeyword("invalid") == null);
-}
-
-// Define the Token struct
-pub const Token = struct {
-    token_type: TokenType,
-    literal: []const u8,
-};
-
-pub fn newToken(token_type: TokenType, literal: []const u8) Token {
-    return Token{ .token_type = token_type, .literal = literal };
-}
