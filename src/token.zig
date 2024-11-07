@@ -24,7 +24,9 @@ pub const TokenTag = enum {
     string_double_quote_literal,
     integer_literal,
     float_literal,
-    bool_literal,
+    true_literal,
+    false_literal,
+    null_literal,
 
     // Identifiers and types
     variable,
@@ -90,6 +92,11 @@ pub const TokenTag = enum {
     plus,
     minus,
     assign,
+    equal,
+    identical,
+    not_equal,
+    not_identical,
+    bang,
 
     // Special operators
     colon,
@@ -122,11 +129,14 @@ pub const Token = union(TokenTag) {
     // End of file
     eof: void,
 
+    // Literals
     string_single_quote_literal: []const u8,
     string_double_quote_literal: []const u8,
     integer_literal: []const u8,
     float_literal: []const u8,
-    bool_literal: []const u8,
+    true_literal: void,
+    false_literal: void,
+    null_literal: void,
 
     variable: []const u8,
     ident: []const u8,
@@ -193,6 +203,11 @@ pub const Token = union(TokenTag) {
     plus: void,
     minus: void,
     assign: void,
+    equal: void,
+    identical: void,
+    not_equal: void,
+    not_identical: void,
+    bang: void,
 
     // Special operators
     colon: void,

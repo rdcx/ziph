@@ -14,8 +14,17 @@ const Lexer = struct {
     position: usize,
     read_position: usize,
     ch: ?u8,
+    line_n: usize,
+    col_n: usize,
 
     fn readChar(self: *Lexer) void {
+        if (self.ch == '\n') {
+            self.line_n += 1;
+            self.col_n = 0;
+        }
+
+        self.col_n += 1;
+
         if (self.read_position >= self.input.len) {
             self.ch = 0;
         } else {
@@ -168,6 +177,16 @@ const Lexer = struct {
         tok = self.detectDoubleArrow();
         if (tok != null) return tok.?;
 
+        tok = self.detectEqual();
+        if (tok != null) return tok.?;
+
+        // Detect not equal before bang operator
+        tok = self.detectNotEqual();
+        if (tok != null) return tok.?;
+
+        tok = self.detectBang();
+        if (tok != null) return tok.?;
+
         tok = self.detectAssign();
         if (tok != null) return tok.?;
 
@@ -181,6 +200,82 @@ const Lexer = struct {
         if (tok != null) return tok.?;
 
         return token.TokenTag.illegal;
+    }
+
+    fn detectBang(self: *Lexer) ?token.Token {
+        if (self.ch == '!') {
+            self.readChar();
+            return token.TokenTag.bang;
+        }
+        return null;
+    }
+
+    test "detectBang returns BANG token" {
+        const input = "!";
+        var l = new(input);
+
+        const tok = l.detectBang().?;
+        try std.testing.expect(tok == token.TokenTag.bang);
+    }
+
+    fn detectEqual(self: *Lexer) ?token.Token {
+        if (self.ch == '=' and self.peekChar() == '=') {
+            self.readChar();
+            if (self.peekChar() == '=') {
+                self.readChar();
+                self.readChar();
+                return token.TokenTag.identical;
+            }
+            return token.TokenTag.equal;
+        }
+        return null;
+    }
+
+    test "detectEqual returns equal token" {
+        const input = "==";
+        var l = new(input);
+
+        const tok = l.detectEqual().?;
+        try std.testing.expect(tok == token.TokenTag.equal);
+    }
+
+    test "detectEqual returns identical token" {
+        const input = "===";
+        var l = new(input);
+
+        const tok = l.detectEqual().?;
+        try std.testing.expect(tok == token.TokenTag.identical);
+    }
+
+    fn detectNotEqual(self: *Lexer) ?token.Token {
+        if (self.ch == '!' and self.peekChar() == '=') {
+            self.readChar();
+            if (self.peekChar() == '=') {
+                self.readChar();
+                self.readChar();
+                return token.TokenTag.not_identical;
+            }
+            return token.TokenTag.not_equal;
+        }
+        return null;
+    }
+
+    test "detectNotEqual returns not_equal token" {
+        const input = "!=";
+        var l = new(input);
+
+        const tok = l.detectNotEqual().?;
+        try std.testing.expect(tok == token.TokenTag.not_equal);
+    }
+
+    test "detectNotEqual returns not_identical token" {
+        const input = "!== $world;";
+        var l = new(input);
+
+        const tok = l.detectNotEqual().?;
+        try std.testing.expect(tok == token.TokenTag.not_identical);
+
+        try std.testing.expect(l.nextToken() == token.TokenTag.variable);
     }
 
     fn detectSemicolon(self: *Lexer) ?token.Token {
@@ -663,7 +758,7 @@ pub fn new(input: []const u8) Lexer {
         ch = input[0];
     }
 
-    var l = Lexer{ .input = input, .position = 0, .read_position = 0, .ch = ch };
+    var l = Lexer{ .input = input, .position = 0, .read_position = 0, .ch = ch, .line_n = 1, .col_n = 1 };
     l.readChar();
     return l;
 }
@@ -886,6 +981,18 @@ fn isRequireOnce(ident: []const u8) bool {
     return std.mem.eql(u8, "require_once", ident);
 }
 
+fn isTrue(ident: []const u8) bool {
+    return std.mem.eql(u8, "true", ident);
+}
+
+fn isFalse(ident: []const u8) bool {
+    return std.mem.eql(u8, "false", ident);
+}
+
+fn isNull(ident: []const u8) bool {
+    return std.mem.eql(u8, "null", ident);
+}
+
 fn lookupIdent(ident: []const u8) token.Token {
     // Type system checks
     if (isInteger(ident)) return token.TokenTag.integer_t;
@@ -944,10 +1051,21 @@ fn lookupIdent(ident: []const u8) token.Token {
     if (isRequire(ident)) return token.TokenTag.require;
     if (isRequireOnce(ident)) return token.TokenTag.require_once;
 
+    // Literal checks
+    if (isTrue(ident)) return token.TokenTag.true_literal;
+    if (isFalse(ident)) return token.TokenTag.false_literal;
+    if (isNull(ident)) return token.TokenTag.null_literal;
+
     return token.Token{ .ident = ident };
 }
 
 test "lookupIdent" {
+
+    // Literal tests
+    try std.testing.expect(lookupIdent("true") == token.TokenTag.true_literal);
+    try std.testing.expect(lookupIdent("false") == token.TokenTag.false_literal);
+    try std.testing.expect(lookupIdent("null") == token.TokenTag.null_literal);
+
     // Type system tests
     try std.testing.expect(lookupIdent("integer") == token.TokenTag.integer_t);
     try std.testing.expect(lookupIdent("string") == token.TokenTag.string_t);
@@ -1212,6 +1330,8 @@ test "PHP lexer" {
         \\ 
         \\ $test = new Test();
         \\ echo $test->add(5, 10);
+        \\ echo $test->add(10, 20) !== 30;
+        \\ echo !false;
     ;
 
     var lexer = new(input);
@@ -1284,6 +1404,26 @@ test "PHP lexer" {
     try expectEqual(token.Token.comma, lexer.nextToken());
     try expectInt("10", lexer.nextToken());
     try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.semicolon, lexer.nextToken());
+
+    // Function call with arguments and comparison
+    try expectEqual(token.Token.echo, lexer.nextToken());
+    try expectVariable("test", lexer.nextToken());
+    try expectEqual(token.Token.object_operator, lexer.nextToken());
+    try expectIdent("add", lexer.nextToken());
+    try expectEqual(token.Token.left_paren, lexer.nextToken());
+    try expectInt("10", lexer.nextToken());
+    try expectEqual(token.Token.comma, lexer.nextToken());
+    try expectInt("20", lexer.nextToken());
+    try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.not_identical, lexer.nextToken());
+    try expectInt("30", lexer.nextToken());
+    try expectEqual(token.Token.semicolon, lexer.nextToken());
+
+    // Echo boolean
+    try expectEqual(token.Token.echo, lexer.nextToken());
+    try expectEqual(token.Token.bang, lexer.nextToken());
+    try expectEqual(token.Token.false_literal, lexer.nextToken());
     try expectEqual(token.Token.semicolon, lexer.nextToken());
 
     // End of file

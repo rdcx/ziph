@@ -18,15 +18,22 @@ class TestCase
     }
 }
 
-class ExampleTest extends TestCase
+class CalculatorTest extends TestCase
 {
     // This is a test method 
-    public function test_that_true_is_true(): void
+    public function test_add(): void
     {
-        $this->assertTrue(true);
+        $calculator = new Calculator();
+        $this->assertTrue($calculator->add(5, 10) === 15);
     }
 }
 
-$test = new ExampleTest();
+class Calculator {
+    public function add(int $a, int $b): int {
+        return $a + $b;
+    }
+}
 
-echo $test->test_that_true_is_true();
+$test = new CalculatorTest();
+
+echo $test->test_add();

@@ -31,6 +31,7 @@ pub fn main() !void {
             try stdout.print("{}\n", .{tok});
 
             if (tok == token.TokenTag.illegal) {
+                std.debug.print("Illegal token found at position {d}:{d}\n", .{ l.line_n, l.col_n });
                 break;
             }
         }
