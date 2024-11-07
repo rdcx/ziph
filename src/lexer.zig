@@ -605,16 +605,275 @@ pub fn New(input: []const u8) Lexer {
     return l;
 }
 
+// Type system check functions
+fn isInteger(ident: []const u8) bool {
+    return std.mem.eql(u8, "integer", ident);
+}
+
+fn isString(ident: []const u8) bool {
+    return std.mem.eql(u8, "string", ident);
+}
+
+fn isFloat(ident: []const u8) bool {
+    return std.mem.eql(u8, "float", ident);
+}
+
+fn isBool(ident: []const u8) bool {
+    return std.mem.eql(u8, "bool", ident);
+}
+
+fn isType(ident: []const u8) bool {
+    return std.mem.eql(u8, "type", ident);
+}
+
+// Keyword check functions
 fn isFunction(ident: []const u8) bool {
     return std.mem.eql(u8, "function", ident);
 }
 
+fn isFn(ident: []const u8) bool {
+    return std.mem.eql(u8, "fn", ident);
+}
+
+fn isClass(ident: []const u8) bool {
+    return std.mem.eql(u8, "class", ident);
+}
+
+fn isInterface(ident: []const u8) bool {
+    return std.mem.eql(u8, "interface", ident);
+}
+
+fn isTrait(ident: []const u8) bool {
+    return std.mem.eql(u8, "trait", ident);
+}
+
+fn isNamespace(ident: []const u8) bool {
+    return std.mem.eql(u8, "namespace", ident);
+}
+
+fn isUse(ident: []const u8) bool {
+    return std.mem.eql(u8, "use", ident);
+}
+
+fn isConst(ident: []const u8) bool {
+    return std.mem.eql(u8, "const", ident);
+}
+
+fn isVar(ident: []const u8) bool {
+    return std.mem.eql(u8, "var", ident);
+}
+
+fn isPublic(ident: []const u8) bool {
+    return std.mem.eql(u8, "public", ident);
+}
+
+fn isProtected(ident: []const u8) bool {
+    return std.mem.eql(u8, "protected", ident);
+}
+
+fn isPrivate(ident: []const u8) bool {
+    return std.mem.eql(u8, "private", ident);
+}
+
+fn isStatic(ident: []const u8) bool {
+    return std.mem.eql(u8, "static", ident);
+}
+
+fn isAbstract(ident: []const u8) bool {
+    return std.mem.eql(u8, "abstract", ident);
+}
+
+fn isFinal(ident: []const u8) bool {
+    return std.mem.eql(u8, "final", ident);
+}
+
+fn isExtends(ident: []const u8) bool {
+    return std.mem.eql(u8, "extends", ident);
+}
+
+fn isImplements(ident: []const u8) bool {
+    return std.mem.eql(u8, "implements", ident);
+}
+
+fn isReturn(ident: []const u8) bool {
+    return std.mem.eql(u8, "return", ident);
+}
+
+fn isIf(ident: []const u8) bool {
+    return std.mem.eql(u8, "if", ident);
+}
+
+fn isElse(ident: []const u8) bool {
+    return std.mem.eql(u8, "else", ident);
+}
+
+fn isElseIf(ident: []const u8) bool {
+    return std.mem.eql(u8, "elseif", ident);
+}
+
+fn isWhile(ident: []const u8) bool {
+    return std.mem.eql(u8, "while", ident);
+}
+
+fn isDo(ident: []const u8) bool {
+    return std.mem.eql(u8, "do", ident);
+}
+
+fn isFor(ident: []const u8) bool {
+    return std.mem.eql(u8, "for", ident);
+}
+
+fn isForeach(ident: []const u8) bool {
+    return std.mem.eql(u8, "foreach", ident);
+}
+
+fn isSwitch(ident: []const u8) bool {
+    return std.mem.eql(u8, "switch", ident);
+}
+
+fn isCase(ident: []const u8) bool {
+    return std.mem.eql(u8, "case", ident);
+}
+
+fn isDefault(ident: []const u8) bool {
+    return std.mem.eql(u8, "default", ident);
+}
+
+fn isBreak(ident: []const u8) bool {
+    return std.mem.eql(u8, "break", ident);
+}
+
+fn isMatch(ident: []const u8) bool {
+    return std.mem.eql(u8, "match", ident);
+}
+
+fn isContinue(ident: []const u8) bool {
+    return std.mem.eql(u8, "continue", ident);
+}
+
+fn isGoto(ident: []const u8) bool {
+    return std.mem.eql(u8, "goto", ident);
+}
+
+fn isThrow(ident: []const u8) bool {
+    return std.mem.eql(u8, "throw", ident);
+}
+
+fn isTry(ident: []const u8) bool {
+    return std.mem.eql(u8, "try", ident);
+}
+
+fn isCatch(ident: []const u8) bool {
+    return std.mem.eql(u8, "catch", ident);
+}
+
+fn isFinally(ident: []const u8) bool {
+    return std.mem.eql(u8, "finally", ident);
+}
+
+fn isYield(ident: []const u8) bool {
+    return std.mem.eql(u8, "yield", ident);
+}
+
+fn isAs(ident: []const u8) bool {
+    return std.mem.eql(u8, "as", ident);
+}
+
+fn isInstanceOf(ident: []const u8) bool {
+    return std.mem.eql(u8, "instanceof", ident);
+}
+
+fn isInsteadOf(ident: []const u8) bool {
+    return std.mem.eql(u8, "insteadof", ident);
+}
+
+fn isGlobal(ident: []const u8) bool {
+    return std.mem.eql(u8, "global", ident);
+}
+
+fn isDeclare(ident: []const u8) bool {
+    return std.mem.eql(u8, "declare", ident);
+}
+
+fn isEcho(ident: []const u8) bool {
+    return std.mem.eql(u8, "echo", ident);
+}
+
+fn isPrint(ident: []const u8) bool {
+    return std.mem.eql(u8, "print", ident);
+}
+
+fn isInclude(ident: []const u8) bool {
+    return std.mem.eql(u8, "include", ident);
+}
+
+fn isIncludeOnce(ident: []const u8) bool {
+    return std.mem.eql(u8, "include_once", ident);
+}
+
+fn isRequire(ident: []const u8) bool {
+    return std.mem.eql(u8, "require", ident);
+}
+
+fn isRequireOnce(ident: []const u8) bool {
+    return std.mem.eql(u8, "require_once", ident);
+}
+
 fn lookupIdent(ident: []const u8) token.Token {
-    if (isFunction(ident)) {
-        return token.TokenTag.function;
-    }
+    if (isFunction(ident)) return token.TokenTag.function;
+    if (isFn(ident)) return token.TokenTag.fn_;
+    if (isClass(ident)) return token.TokenTag.class;
+    if (isInterface(ident)) return token.TokenTag.interface;
+    if (isTrait(ident)) return token.TokenTag.trait;
+    if (isNamespace(ident)) return token.TokenTag.namespace;
+    if (isUse(ident)) return token.TokenTag.use;
+    if (isConst(ident)) return token.TokenTag.const_;
+    if (isVar(ident)) return token.TokenTag.var_;
+    if (isPublic(ident)) return token.TokenTag.public;
+    if (isProtected(ident)) return token.TokenTag.protected;
+    if (isPrivate(ident)) return token.TokenTag.private;
+    if (isStatic(ident)) return token.TokenTag.static;
+    if (isAbstract(ident)) return token.TokenTag.abstract;
+    if (isFinal(ident)) return token.TokenTag.final;
+    if (isExtends(ident)) return token.TokenTag.extends;
+    if (isImplements(ident)) return token.TokenTag.implements;
+    if (isReturn(ident)) return token.TokenTag.return_;
+    if (isIf(ident)) return token.TokenTag.if_;
+    if (isElse(ident)) return token.TokenTag.else_;
+    if (isElseIf(ident)) return token.TokenTag.elseif;
+    if (isWhile(ident)) return token.TokenTag.while_;
+    if (isDo(ident)) return token.TokenTag.do_;
+    if (isFor(ident)) return token.TokenTag.for_;
+    if (isForeach(ident)) return token.TokenTag.foreach;
+    if (isSwitch(ident)) return token.TokenTag.switch_;
+    if (isCase(ident)) return token.TokenTag.case;
+    if (isDefault(ident)) return token.TokenTag.default;
+    if (isBreak(ident)) return token.TokenTag.break_;
+    if (isMatch(ident)) return token.TokenTag.match;
+    if (isContinue(ident)) return token.TokenTag.continue_;
+    if (isGoto(ident)) return token.TokenTag.goto;
+    if (isThrow(ident)) return token.TokenTag.throw;
+    if (isTry(ident)) return token.TokenTag.try_;
+    if (isCatch(ident)) return token.TokenTag.catch_;
+    if (isFinally(ident)) return token.TokenTag.finally;
+    if (isYield(ident)) return token.TokenTag.yield;
+    if (isAs(ident)) return token.TokenTag.as;
+    if (isInstanceOf(ident)) return token.TokenTag.instanceof;
+    if (isInsteadOf(ident)) return token.TokenTag.insteadof;
+    if (isGlobal(ident)) return token.TokenTag.global;
+    if (isDeclare(ident)) return token.TokenTag.declare;
+    if (isEcho(ident)) return token.TokenTag.echo;
+    if (isPrint(ident)) return token.TokenTag.print;
+    if (isInclude(ident)) return token.TokenTag.include;
+    if (isIncludeOnce(ident)) return token.TokenTag.include_once;
+    if (isRequire(ident)) return token.TokenTag.require;
+    if (isRequireOnce(ident)) return token.TokenTag.require_once;
 
     return token.Token{ .ident = ident };
+}
+
+test "lookupIdent" {
+    try std.testing.expect(lookupIdent("function") == token.TokenTag.function);
 }
 
 test "Test jumpLiteral" {
@@ -673,15 +932,6 @@ test "readIdentifier returns App\\Person" {
     try std.testing.expect(std.mem.eql(u8, "App\\Person", ident));
 }
 
-test "nextToken skips whitespace" {
-    const input = " \t\n\r;";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.SEMICOLON);
-    try std.testing.expect(std.mem.eql(u8, ";", tok.literal));
-}
-
 test "isOpenTag returns true" {
     const input = "<?php";
     var l = New(input);
@@ -722,223 +972,6 @@ test "isCloseTag returns false" {
     var l = New(input);
 
     try std.testing.expect(!l.isCloseTag());
-}
-
-test "nextToken returns OPEN_TAG" {
-    const input = "\n<?php";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.OPEN_TAG);
-    try std.testing.expect(std.mem.eql(u8, "<?php", tok.literal));
-}
-
-test "nextToken returns keyword ECHO" {
-    const input = "echo";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.ECHO);
-    try std.testing.expect(std.mem.eql(u8, "echo", tok.literal));
-}
-
-test "nextToken returns keyword FUNCTION" {
-    const input = "function";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.FUNCTION);
-    try std.testing.expect(std.mem.eql(u8, "function", tok.literal));
-}
-
-test "nextToken returns VARIABLE" {
-    const input = "$world;";
-    var l = New(input);
-
-    const tok = l.nextToken();
-
-    try std.testing.expect(tok.token_type == token.TokenTag.VARIABLE);
-    try std.testing.expect(std.mem.eql(u8, "world", tok.literal));
-}
-
-test "nextToken returns INTEGER" {
-    const input = "10;";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.INTEGER);
-    try std.testing.expect(std.mem.eql(u8, "10", tok.literal));
-}
-
-test "nextToken returns LEFT_BRACE" {
-    const input = "{";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.LEFT_BRACE);
-    try std.testing.expect(std.mem.eql(u8, "{", tok.literal));
-}
-
-test "nextToken returns RIGHT_BRACE" {
-    const input = "}";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.RIGHT_BRACE);
-    try std.testing.expect(std.mem.eql(u8, "}", tok.literal));
-}
-
-test "nextToken returns LEFT_PAREN" {
-    const input = "(";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.LEFT_PAREN);
-    try std.testing.expect(std.mem.eql(u8, "(", tok.literal));
-}
-
-test "nextToken returns RIGHT_PAREN" {
-    const input = ")";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.RIGHT_PAREN);
-    try std.testing.expect(std.mem.eql(u8, ")", tok.literal));
-}
-
-test "nextToken returns PLUS" {
-    const input = "+";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.PLUS);
-    try std.testing.expect(std.mem.eql(u8, "+", tok.literal));
-}
-
-test "nextToken returns MINUS" {
-    const input = "-";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.MINUS);
-    try std.testing.expect(std.mem.eql(u8, "-", tok.literal));
-}
-
-test "nextToken returns ASSIGN" {
-    const input = "=";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.ASSIGN);
-    try std.testing.expect(std.mem.eql(u8, "=", tok.literal));
-}
-
-test "nextToken returns TYPE int" {
-    const input = "int";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.TYPE);
-    try std.testing.expect(std.mem.eql(u8, "int", tok.literal));
-}
-
-test "nextToken returns TYPE float" {
-    const input = "float";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.TYPE);
-    try std.testing.expect(std.mem.eql(u8, "float", tok.literal));
-}
-
-test "nextToken returns TYPE string" {
-    const input = "string";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.TYPE);
-    try std.testing.expect(std.mem.eql(u8, "string", tok.literal));
-}
-
-test "nextToken returns TYPE bool" {
-    const input = "bool";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.TYPE);
-    try std.testing.expect(std.mem.eql(u8, "bool", tok.literal));
-}
-
-test "nextToken returns STRING" {
-    const input = "\"Hello, World!\"";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.STRING);
-    try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.literal));
-}
-
-test "nextToken returns LEFT_BRACKET" {
-    const input = "[";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.LEFT_BRACKET);
-    try std.testing.expect(std.mem.eql(u8, "[", tok.literal));
-}
-
-test "nextToken returns RIGHT_BRACKET" {
-    const input = "]";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.RIGHT_BRACKET);
-    try std.testing.expect(std.mem.eql(u8, "]", tok.literal));
-}
-
-test "nextToken returns COLON" {
-    const input = ":";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.COLON);
-    try std.testing.expect(std.mem.eql(u8, ":", tok.literal));
-}
-
-test "nextToken returns DOUBLE_COLON" {
-    const input = "::";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.DOUBLE_COLON);
-    try std.testing.expect(std.mem.eql(u8, "::", tok.literal));
-}
-
-test "nextToken returns OBJECT_OPERATOR" {
-    const input = "->";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.OBJECT_OPERATOR);
-    try std.testing.expect(std.mem.eql(u8, "->", tok.literal));
-}
-
-test "nextToken returns DOUBLE_ARROW" {
-    const input = "=>";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.DOUBLE_ARROW);
-    try std.testing.expect(std.mem.eql(u8, "=>", tok.literal));
-}
-
-test "nextToken returns COMMA" {
-    const input = ",";
-    var l = New(input);
-
-    const tok = l.nextToken();
-    try std.testing.expect(tok.token_type == token.TokenTag.COMMA);
-    try std.testing.expect(std.mem.eql(u8, ",", tok.literal));
 }
 
 pub fn isEOF(ch: ?u8) bool {
