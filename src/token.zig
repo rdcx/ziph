@@ -120,15 +120,26 @@ pub const Keywords = [_]Keyword{
     Keyword{ .name = "object", .token_type = TokenType.TYPE },
     Keyword{ .name = "array", .token_type = TokenType.TYPE },
 
+    // Class Keywords
     Keyword{ .name = "class", .token_type = TokenType.CLASS },
     Keyword{ .name = "extends", .token_type = TokenType.EXTENDS },
     Keyword{ .name = "interface", .token_type = TokenType.INTERFACE },
     Keyword{ .name = "trait", .token_type = TokenType.TRAIT },
     Keyword{ .name = "namespace", .token_type = TokenType.NAMESPACE },
     Keyword{ .name = "use", .token_type = TokenType.USE },
+    Keyword{ .name = "public", .token_type = TokenType.PUBLIC },
+    Keyword{ .name = "protected", .token_type = TokenType.PROTECTED },
+    Keyword{ .name = "private", .token_type = TokenType.PRIVATE },
+    Keyword{ .name = "static", .token_type = TokenType.STATIC },
+    Keyword{ .name = "abstract", .token_type = TokenType.ABSTRACT },
+    Keyword{ .name = "final", .token_type = TokenType.FINAL },
+
+    // Function Keywords
     Keyword{ .name = "function", .token_type = TokenType.FUNCTION },
-    Keyword{ .name = "fn", .token_type = TokenType.FN },
     Keyword{ .name = "return", .token_type = TokenType.RETURN },
+    Keyword{ .name = "fn", .token_type = TokenType.FN },
+
+    // Control Keywords
     Keyword{ .name = "if", .token_type = TokenType.IF },
     Keyword{ .name = "else", .token_type = TokenType.ELSE },
     Keyword{ .name = "elseif", .token_type = TokenType.ELSEIF },
@@ -149,11 +160,14 @@ pub const Keywords = [_]Keyword{
     Keyword{ .name = "finally", .token_type = TokenType.FINALLY },
     Keyword{ .name = "yield", .token_type = TokenType.YIELD },
     Keyword{ .name = "as", .token_type = TokenType.AS },
+
+    // Special Keywords
     Keyword{ .name = "instanceof", .token_type = TokenType.INSTANCEOF },
     Keyword{ .name = "insteadof", .token_type = TokenType.INSTEADOF },
     Keyword{ .name = "global", .token_type = TokenType.GLOBAL },
     Keyword{ .name = "declare", .token_type = TokenType.DECLARE },
 
+    // IO Keywords
     Keyword{ .name = "echo", .token_type = TokenType.ECHO },
 };
 
@@ -193,6 +207,12 @@ test "getKeyword" {
     try std.testing.expect(getKeyword("trait") == TokenType.TRAIT);
     try std.testing.expect(getKeyword("namespace") == TokenType.NAMESPACE);
     try std.testing.expect(getKeyword("use") == TokenType.USE);
+    try std.testing.expect(getKeyword("public") == TokenType.PUBLIC);
+    try std.testing.expect(getKeyword("protected") == TokenType.PROTECTED);
+    try std.testing.expect(getKeyword("private") == TokenType.PRIVATE);
+    try std.testing.expect(getKeyword("static") == TokenType.STATIC);
+    try std.testing.expect(getKeyword("abstract") == TokenType.ABSTRACT);
+    try std.testing.expect(getKeyword("final") == TokenType.FINAL);
 
     try std.testing.expect(getKeyword("return") == TokenType.RETURN);
     try std.testing.expect(getKeyword("if") == TokenType.IF);

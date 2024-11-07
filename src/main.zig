@@ -28,7 +28,7 @@ pub fn main() !void {
                 break;
             }
 
-            try stdout.print("Token: {}\n", .{tok.token_type});
+            try stdout.print("{}:   {s}\n", .{ tok.token_type, tok.literal });
 
             if (tok.token_type == token.TokenType.ILLEGAL) {
                 break;
