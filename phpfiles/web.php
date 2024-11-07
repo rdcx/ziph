@@ -2,16 +2,17 @@
 
 namespace App\Classes;
 
-class Web {
-    public static function init() {
-        echo "Web class has been initiated";
+class Test {
+    public function __construct() {
+        echo "Test class has been initiated";
     }
 
-    public function __construct() {
-        echo "Web class has been initiated";
+    public function add(int $a, int $b): int {
+        return $a + $b;
     }
 }
 
-Web::init();
+$test = new Test();
 
+echo $test->add(5, 10);
 ?>

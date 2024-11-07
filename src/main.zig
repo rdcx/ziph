@@ -20,17 +20,17 @@ pub fn main() !void {
         const file_content = try std.fs.cwd().readFileAlloc(gpa.allocator(), f, std.math.maxInt(usize));
         std.debug.print("{s}\n", .{file_content});
 
-        var l = lexer.New(file_content);
+        var l = lexer.new(file_content);
 
         while (true) {
             const tok = l.nextToken();
-            if (tok.token_type == token.TokenType.EOF) {
+            if (tok == token.TokenTag.eof) {
                 break;
             }
 
-            try stdout.print("{}:   {s}\n", .{ tok.token_type, tok.literal });
+            try stdout.print("{}\n", .{tok});
 
-            if (tok.token_type == token.TokenType.ILLEGAL) {
+            if (tok == token.TokenTag.illegal) {
                 break;
             }
         }

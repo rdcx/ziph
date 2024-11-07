@@ -1,6 +1,10 @@
 const std = @import("std");
 const token = @import("token.zig");
 
+const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
+const expectEqualStrings = std.testing.expectEqualStrings;
+
 test {
     std.testing.refAllDecls(@This());
 }
@@ -131,7 +135,7 @@ const Lexer = struct {
 
     test "detectSemicolon returns SEMICOLON token" {
         const input = ";";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectSemicolon().?;
         try std.testing.expect(tok == token.TokenTag.semicolon);
@@ -154,7 +158,7 @@ const Lexer = struct {
 
     test "detectOpenTag returns open_tag token" {
         const input = "<?php";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectOpenTag().?;
         try std.testing.expect(tok == token.TokenTag.open_tag);
@@ -171,7 +175,7 @@ const Lexer = struct {
 
     test "detectCloseTag returns close_tag token" {
         const input = "?>";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectCloseTag().?;
         try std.testing.expect(tok == token.TokenTag.close_tag);
@@ -186,7 +190,7 @@ const Lexer = struct {
 
     test "detectEOF returns eof token" {
         const input = "";
-        var l = New(input);
+        var l = new(input);
         l.ch = 0;
 
         const tok = l.detectEOF().?;
@@ -204,7 +208,7 @@ const Lexer = struct {
 
     test "detectIntegerLiteral returns integer_literal token" {
         const input = "12345;";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectIntegerLiteral().?;
         try std.testing.expect(tok == token.TokenTag.integer_literal);
@@ -222,7 +226,7 @@ const Lexer = struct {
     }
     test "detectIdentifier returns ident token" {
         const input = "person";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectIdentifier().?;
         try std.testing.expect(tok == token.TokenTag.ident);
@@ -231,7 +235,7 @@ const Lexer = struct {
 
     test "detectIdentifier returns function token" {
         const input = "function";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectIdentifier().?;
         try std.testing.expect(tok == token.TokenTag.function);
@@ -249,7 +253,7 @@ const Lexer = struct {
 
     test "detectVariable returns variable token" {
         const input = "$world;";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectVariable().?;
         try std.testing.expect(tok == token.TokenTag.variable);
@@ -266,7 +270,7 @@ const Lexer = struct {
 
     test "detectLeftParen returns left_paren token" {
         const input = "(";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectLeftParen().?;
         try std.testing.expect(tok == token.TokenTag.left_paren);
@@ -282,7 +286,7 @@ const Lexer = struct {
 
     test "detectRightParen returns right_paren token" {
         const input = ")";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectRightParen().?;
         try std.testing.expect(tok == token.TokenTag.right_paren);
@@ -298,7 +302,7 @@ const Lexer = struct {
 
     test "detectLeftBrace returns left_brace token" {
         const input = "{";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectLeftBrace().?;
         try std.testing.expect(tok == token.TokenTag.left_brace);
@@ -314,7 +318,7 @@ const Lexer = struct {
 
     test "detectRightBrace returns right_brace token" {
         const input = "}";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectRightBrace().?;
         try std.testing.expect(tok == token.TokenTag.right_brace);
@@ -330,7 +334,7 @@ const Lexer = struct {
 
     test "detectPlus returns plus token" {
         const input = "+";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectPlus().?;
         try std.testing.expect(tok == token.TokenTag.plus);
@@ -346,7 +350,7 @@ const Lexer = struct {
 
     test "detectMinus returns minus token" {
         const input = "-";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectMinus().?;
         try std.testing.expect(tok == token.TokenTag.minus);
@@ -362,7 +366,7 @@ const Lexer = struct {
 
     test "detectAssign returns assign token" {
         const input = "=";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectAssign().?;
         try std.testing.expect(tok == token.TokenTag.assign);
@@ -395,7 +399,7 @@ const Lexer = struct {
 
     test "detectString returns string_double_quote_literal token" {
         const input = "\"Hello, World!\"";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectString().?;
         try std.testing.expect(tok == token.TokenTag.string_double_quote_literal);
@@ -404,7 +408,7 @@ const Lexer = struct {
 
     test "detectString returns string_single_quote_literal token" {
         const input = "'Hello, World!'";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectString().?;
         try std.testing.expect(tok == token.TokenTag.string_single_quote_literal);
@@ -421,7 +425,7 @@ const Lexer = struct {
 
     test "detectLeftBracket returns left_bracket token" {
         const input = "[";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectLeftBracket().?;
         try std.testing.expect(tok == token.TokenTag.left_bracket);
@@ -437,7 +441,7 @@ const Lexer = struct {
 
     test "detectRightBracket returns RIGHT_BRACKET token" {
         const input = "]";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectRightBracket().?;
         try std.testing.expect(tok == token.TokenTag.right_bracket);
@@ -457,7 +461,7 @@ const Lexer = struct {
 
     test "detectColon returns colon token" {
         const input = ":";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectColon().?;
         try std.testing.expect(tok == token.TokenTag.colon);
@@ -465,7 +469,7 @@ const Lexer = struct {
 
     test "detectColon returns double_colon token" {
         const input = "::";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectColon().?;
         try std.testing.expect(tok == token.TokenTag.double_colon);
@@ -481,7 +485,7 @@ const Lexer = struct {
 
     test "detectObjectOperator returns object_operator token" {
         const input = "->";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectObjectOperator().?;
         try std.testing.expect(tok == token.TokenTag.object_operator);
@@ -500,7 +504,7 @@ const Lexer = struct {
 
     test "detectDoubleArrow returns double_arrow token" {
         const input = "=>";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectDoubleArrow().?;
         try std.testing.expect(tok == token.TokenTag.double_arrow);
@@ -516,7 +520,7 @@ const Lexer = struct {
 
     test "detectComma returns COMMA token" {
         const input = ",";
-        var l = New(input);
+        var l = new(input);
 
         const tok = l.detectComma().?;
         try std.testing.expect(tok == token.TokenTag.comma);
@@ -532,14 +536,14 @@ const Lexer = struct {
 
     test "isObjectOperator returns true" {
         const input = "->";
-        var l = New(input);
+        var l = new(input);
 
         try std.testing.expect(l.isObjectOperator());
     }
 
     test "isObjectOperator returns false" {
         const input = "-";
-        var l = New(input);
+        var l = new(input);
 
         try std.testing.expect(!l.isObjectOperator());
     }
@@ -593,7 +597,7 @@ const Lexer = struct {
     }
 };
 
-pub fn New(input: []const u8) Lexer {
+pub fn new(input: []const u8) Lexer {
     var ch: u8 = 0;
 
     if (input.len > 0) {
@@ -940,7 +944,7 @@ test "lookupIdent" {
 
 test "Test jumpLiteral" {
     const input = "echo 10;";
-    var l = New(input);
+    var l = new(input);
 
     l.jumpLiteral("echo");
     try std.testing.expect(l.ch == ' ');
@@ -948,7 +952,7 @@ test "Test jumpLiteral" {
 
 test "Test readInt" {
     const input = "12345;";
-    var l = New(input);
+    var l = new(input);
 
     const int = l.readInt();
     try std.testing.expect(std.mem.eql(u8, "12345", int));
@@ -957,7 +961,7 @@ test "Test readInt" {
 
 test "Test readChar" {
     const input = "echo 10;";
-    var l = New(input);
+    var l = new(input);
 
     try std.testing.expect(l.ch == 'e');
     l.readChar();
@@ -980,7 +984,7 @@ test "Test readChar" {
 
 test "readIdentifier returns person" {
     const input = "person";
-    var l = New(input);
+    var l = new(input);
 
     const ident = l.readIdentifier();
     try std.testing.expect(std.mem.eql(u8, "person", ident));
@@ -988,7 +992,7 @@ test "readIdentifier returns person" {
 
 test "readIdentifier returns App\\Person" {
     const input = "App\\Person";
-    var l = New(input);
+    var l = new(input);
 
     const ident = l.readIdentifier();
     try std.testing.expect(std.mem.eql(u8, "App\\Person", ident));
@@ -996,42 +1000,42 @@ test "readIdentifier returns App\\Person" {
 
 test "isOpenTag returns true" {
     const input = "<?php";
-    var l = New(input);
+    var l = new(input);
 
     try std.testing.expect(l.isOpenTag());
 }
 
 test "isOpenTag returns false" {
     const input = "ab<?p";
-    var l = New(input);
+    var l = new(input);
 
     try std.testing.expect(!l.isOpenTag());
 }
 
 test "isShortOpenTag returns true" {
     const input = "<?";
-    var l = New(input);
+    var l = new(input);
 
     try std.testing.expect(l.isShortOpenTag());
 }
 
 test "isShortOpenTag returns false" {
     const input = "_<?";
-    var l = New(input);
+    var l = new(input);
 
     try std.testing.expect(!l.isShortOpenTag());
 }
 
 test "isCloseTag returns true" {
     const input = "?>";
-    var l = New(input);
+    var l = new(input);
 
     try std.testing.expect(l.isCloseTag());
 }
 
 test "isCloseTag returns false" {
     const input = "d?>";
-    var l = New(input);
+    var l = new(input);
 
     try std.testing.expect(!l.isCloseTag());
 }
@@ -1096,4 +1100,128 @@ test "Test isBackslash" {
     try std.testing.expect(!isBackslash('Z'));
     try std.testing.expect(!isBackslash('_'));
     try std.testing.expect(!isBackslash(';'));
+}
+
+// test utils
+fn expectStringInnerToken(expected: []const u8, actual: token.Token) !void {
+    switch (actual) {
+        token.Token.ident, token.Token.integer_literal, token.Token.string_double_quote_literal, token.Token.string_single_quote_literal => |value| try expectEqualStrings(expected, value),
+        else => unreachable,
+    }
+}
+
+fn expectIdent(expected: []const u8, actual: token.Token) !void {
+    try expect(actual == .ident);
+    try expectStringInnerToken(expected, actual);
+}
+
+fn expectVariable(expected: []const u8, actual: token.Token) !void {
+    try expect(actual == .variable);
+    try expectStringInnerToken(expected, actual);
+}
+
+fn expectInt(expected: []const u8, actual: token.Token) !void {
+    try expect(actual == .integer_literal);
+    try expectStringInnerToken(expected, actual);
+}
+
+fn expectStringLiteral(expected: []const u8, actual: token.Token) !void {
+    try expect(actual == .string_double_quote_literal or actual == .string_single_quote_literal);
+    try expectStringInnerToken(expected, actual);
+}
+
+test "PHP lexer" {
+    const input =
+        \\ <?php
+        \\ 
+        \\ namespace App\Classes;
+        \\ 
+        \\ class Test {
+        \\     public function __construct() {
+        \\         echo "Test class has been initiated";
+        \\     }
+        \\ 
+        \\     public function add(int $a, int $b): int {
+        \\         return $a + $b;
+        \\     }
+        \\ }
+        \\ 
+        \\ $test = new Test();
+        \\ echo $test->add(5, 10);
+    ;
+
+    var lexer = new(input);
+
+    // PHP open tag
+    try expectEqual(token.Token.open_tag, lexer.nextToken());
+
+    // Namespace declaration
+    try expectEqual(token.Token.namespace, lexer.nextToken());
+    try expectIdent("App\\Classes", lexer.nextToken());
+    try expectEqual(token.Token.semicolon, lexer.nextToken());
+
+    // Class declaration
+    try expectEqual(token.Token.class, lexer.nextToken());
+    try expectIdent("Test", lexer.nextToken());
+    try expectEqual(token.Token.left_brace, lexer.nextToken());
+
+    // Public function __construct
+    try expectEqual(token.Token.public, lexer.nextToken());
+    try expectEqual(token.Token.function, lexer.nextToken());
+    try expectIdent("__construct", lexer.nextToken());
+    try expectEqual(token.Token.left_paren, lexer.nextToken());
+    try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.left_brace, lexer.nextToken());
+    try expectEqual(token.Token.echo, lexer.nextToken());
+    try expectStringLiteral("Test class has been initiated", lexer.nextToken());
+    try expectEqual(token.Token.semicolon, lexer.nextToken());
+    try expectEqual(token.Token.right_brace, lexer.nextToken());
+
+    // Public function add
+    try expectEqual(token.Token.public, lexer.nextToken());
+    try expectEqual(token.Token.function, lexer.nextToken());
+    try expectIdent("add", lexer.nextToken());
+    try expectEqual(token.Token.left_paren, lexer.nextToken());
+    try expectIdent("int", lexer.nextToken());
+    try expectVariable("a", lexer.nextToken());
+    try expectEqual(token.Token.comma, lexer.nextToken());
+    try expectIdent("int", lexer.nextToken());
+    try expectVariable("b", lexer.nextToken());
+    try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.colon, lexer.nextToken());
+    try expectIdent("int", lexer.nextToken());
+    try expectEqual(token.Token.left_brace, lexer.nextToken());
+    try expectEqual(token.Token.return_, lexer.nextToken());
+    try expectVariable("a", lexer.nextToken());
+    try expectEqual(token.Token.plus, lexer.nextToken());
+    try expectVariable("b", lexer.nextToken());
+    try expectEqual(token.Token.semicolon, lexer.nextToken());
+    try expectEqual(token.Token.right_brace, lexer.nextToken());
+
+    // Close class
+    try expectEqual(token.Token.right_brace, lexer.nextToken());
+
+    // // Variable and instantiation
+    // try expectVariable("test", lexer.nextToken());
+    // try expectEqual(token.Token.assign, lexer.nextToken());
+    // try expectEqual(token.Token.new, lexer.nextToken());
+    // try expectIdent("Test", lexer.nextToken());
+    // try expectEqual(token.Token.left_paren, lexer.nextToken());
+    // try expectEqual(token.Token.right_paren, lexer.nextToken());
+    // try expectEqual(token.Token.semicolon, lexer.nextToken());
+
+    // // Function call with arguments
+    // try expectEqual(token.Token.echo, lexer.nextToken());
+    // try expectVariable("test", lexer.nextToken());
+    // try expectEqual(token.Token.object_operator, lexer.nextToken());
+    // try expectIdent("add", lexer.nextToken());
+    // try expectEqual(token.Token.left_paren, lexer.nextToken());
+    // try expectInt("5", lexer.nextToken());
+    // try expectEqual(token.Token.comma, lexer.nextToken());
+    // try expectInt("10", lexer.nextToken());
+    // try expectEqual(token.Token.right_paren, lexer.nextToken());
+    // try expectEqual(token.Token.semicolon, lexer.nextToken());
+
+    // // End of file
+    // try expectEqual(token.Token.eof, lexer.nextToken());
 }

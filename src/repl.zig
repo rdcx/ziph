@@ -13,17 +13,17 @@ pub fn start() !void {
     while (true) {
         const in = try stdin.readUntilDelimiterAlloc(alloc, '\n', 100);
 
-        var l = lexer.New(in);
+        var l = lexer.new(in);
 
         while (true) {
             const tok = l.nextToken();
-            if (tok.token_type == token.TokenType.EOF) {
+            if (tok == token.TokenTag.eof) {
                 break;
             }
 
-            try stdout.print("Token: {} Literal: {s}\n", .{ tok.token_type, tok.literal });
+            try stdout.print("{}\n", .{tok});
 
-            if (tok.token_type == token.TokenType.ILLEGAL) {
+            if (tok == token.TokenTag.illegal) {
                 break;
             }
         }
