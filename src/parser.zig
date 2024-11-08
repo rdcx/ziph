@@ -41,9 +41,14 @@ const Priority = enum(u4) {
         return switch (tok) {
             .equal => .equals,
             .not_equal => .equals,
+            .lt => .lessgreater,
+            .gt => .lessgreater,
+            .lte => .lessgreater,
+            .gte => .lessgreater,
             .plus => .sum,
-            .asterisk => .product,
             .minus => .sum,
+            .asterisk => .product,
+            .slash => .product,
             .left_paren => .call,
             .left_bracket => .index,
             else => .lowest,
@@ -224,8 +229,19 @@ pub const Parser = struct {
                 return ast.Expression{ .variable = ast.Variable{ .value = try self.parseVariable() } };
             },
             .integer_literal => ast.Expression{ .integer = try self.parseInteger() },
-            else => ParserError.InvalidPrefix,
+            .left_paren => try self.parseGroupedExpression(),
+            else => {
+                std.debug.print("unsupported {}\n", .{tok});
+                return ParserError.InvalidPrefix;
+            },
         };
+    }
+
+    fn parseGroupedExpression(self: *Self) ParserError!ast.Expression {
+        self.nextToken();
+        const expression = try self.parseExpression(.lowest);
+        try self.expectPeek(.right_paren);
+        return expression;
     }
 
     fn parseAssignmentExpression(self: *Self) ParserError!ast.Assignment {
