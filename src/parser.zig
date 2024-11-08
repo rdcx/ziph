@@ -133,12 +133,12 @@ pub const Parser = struct {
                 self.nextToken();
                 return try self.parseStatement();
             },
-            .variable => {
-                if (self.peekTokenIs(.assign)) {
-                    return ast.Statement{ .assignment = try self.parseAssignmentStatement() };
-                }
-                return ast.Statement{ .expressionStatement = try self.parseExpressionStatement() };
-            },
+            // .variable => {
+            //     if (self.peekTokenIs(.assign)) {
+            //         return ast.Statement{ .assignment = try self.parseAssignmentStatement() };
+            //     }
+            //     return ast.Statement{ .expressionStatement = try self.parseExpressionStatement() };
+            // },
             else => ast.Statement{ .expressionStatement = try self.parseExpressionStatement() },
         };
     }
