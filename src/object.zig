@@ -6,6 +6,7 @@ pub const Object = union(enum) {
     error_: Error,
     integer: Integer,
     boolean: Boolean,
+    float: Float,
 
     pub fn toString(self: *Object, buf: *string.String) string.String.Error!void {
         switch (self.*) {
@@ -65,5 +66,14 @@ pub const Boolean = struct {
         } else {
             try buf.concat("false");
         }
+    }
+};
+
+pub const Float = struct {
+    value: f64,
+
+    pub fn toString(self: Float, buf: *string.String) string.String.Error!void {
+        const floatString = try std.fmt.allocPrint(buf.allocator, "{}", .{self.value});
+        try buf.concat(floatString);
     }
 };

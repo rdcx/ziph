@@ -96,18 +96,35 @@ pub const Lexer = struct {
         try expect(l.ch == 0);
     }
 
-    pub fn jumpLiteral(self: *Lexer, literal: []const u8) void {
+    fn jumpLiteral(self: *Lexer, literal: []const u8) void {
         for (0..literal.len) |_| {
             self.readChar();
         }
     }
 
-    pub fn readInt(self: *Lexer) []const u8 {
+    test "Test jumpLiteral" {
+        const input = "echo 10;";
+        var l = new(input);
+
+        l.jumpLiteral("echo");
+        try std.testing.expect(l.ch == ' ');
+    }
+
+    fn readInt(self: *Lexer) []const u8 {
         const position = self.position;
         while (isDigit(self.ch)) {
             self.readChar();
         }
         return self.input[position..self.position];
+    }
+
+    test "Test readInt" {
+        const input = "12345;";
+        var l = new(input);
+
+        const int = l.readInt();
+        try std.testing.expect(std.mem.eql(u8, "12345", int));
+        try std.testing.expect(l.ch == ';');
     }
 
     pub fn nextToken(self: *Lexer) token.Token {
@@ -154,7 +171,7 @@ pub const Lexer = struct {
         tok = self.detectRightBracket();
         if (tok != null) return tok.?;
 
-        tok = self.detectIntegerLiteral();
+        tok = self.detectNumber();
         if (tok != null) return tok.?;
 
         tok = self.detectString();
@@ -224,6 +241,43 @@ pub const Lexer = struct {
         if (tok != null) return tok.?;
 
         return token.TokenTag.illegal;
+    }
+
+    fn detectNumber(self: *Lexer) ?token.Token {
+        if (!isDigit(self.ch)) {
+            return null;
+        }
+
+        const startPosition = self.position;
+        const int = self.readInt();
+        if (self.ch != '.') {
+            return token.Token{ .integer_literal = int };
+        }
+
+        self.readChar();
+        while (isDigit(self.ch)) {
+            self.readChar();
+        }
+        const float = self.input[startPosition..self.position];
+        return token.Token{ .float_literal = float };
+    }
+
+    test "detectNumber returns integer_literal token" {
+        const input = "12345;";
+        var l = new(input);
+
+        const tok = l.detectNumber().?;
+        try std.testing.expect(tok == token.TokenTag.integer_literal);
+        try std.testing.expect(std.mem.eql(u8, "12345", tok.integer_literal));
+    }
+
+    test "detectNumber returns float_literal token" {
+        const input = "123.45;";
+        var l = new(input);
+
+        const tok = l.detectNumber().?;
+        try std.testing.expect(tok == token.TokenTag.float_literal);
+        try std.testing.expect(std.mem.eql(u8, "123.45", tok.float_literal));
     }
 
     fn detectQuestionMark(self: *Lexer) ?token.Token {
@@ -439,24 +493,6 @@ pub const Lexer = struct {
 
         const tok = l.detectEOF().?;
         try std.testing.expect(tok == token.TokenTag.eof);
-    }
-
-    fn detectIntegerLiteral(self: *Lexer) ?token.Token {
-        if (!isDigit(self.ch)) {
-            return null;
-        }
-
-        const int = self.readInt();
-        return token.Token{ .integer_literal = int };
-    }
-
-    test "detectIntegerLiteral returns integer_literal token" {
-        const input = "12345;";
-        var l = new(input);
-
-        const tok = l.detectIntegerLiteral().?;
-        try std.testing.expect(tok == token.TokenTag.integer_literal);
-        try std.testing.expect(std.mem.eql(u8, "12345", tok.integer_literal));
     }
 
     fn detectIdentifier(self: *Lexer) ?token.Token {
@@ -1310,23 +1346,6 @@ test "lookupIdent" {
     try std.testing.expect(lookupIdent("require_once") == token.TokenTag.require_once);
 }
 
-test "Test jumpLiteral" {
-    const input = "echo 10;";
-    var l = new(input);
-
-    l.jumpLiteral("echo");
-    try std.testing.expect(l.ch == ' ');
-}
-
-test "Test readInt" {
-    const input = "12345;";
-    var l = new(input);
-
-    const int = l.readInt();
-    try std.testing.expect(std.mem.eql(u8, "12345", int));
-    try std.testing.expect(l.ch == ';');
-}
-
 test "Test readChar" {
     const input = "echo 10;";
     var l = new(input);
@@ -1473,7 +1492,7 @@ test "Test isBackslash" {
 // test utils
 fn expectStringInnerToken(expected: []const u8, actual: token.Token) !void {
     switch (actual) {
-        token.Token.ident, token.Token.variable, token.Token.integer_literal, token.Token.string_double_quote_literal, token.Token.string_single_quote_literal => |value| try expectEqualStrings(expected, value),
+        token.Token.ident, token.Token.variable, token.Token.integer_literal, token.Token.float_literal, token.Token.string_double_quote_literal, token.Token.string_single_quote_literal => |value| try expectEqualStrings(expected, value),
         else => unreachable,
     }
 }
@@ -1495,6 +1514,11 @@ fn expectInt(expected: []const u8, actual: token.Token) !void {
 
 fn expectStringLiteral(expected: []const u8, actual: token.Token) !void {
     try expect(actual == .string_double_quote_literal or actual == .string_single_quote_literal);
+    try expectStringInnerToken(expected, actual);
+}
+
+fn expectFloat(expected: []const u8, actual: token.Token) !void {
+    try expect(actual == .float_literal);
     try expectStringInnerToken(expected, actual);
 }
 
@@ -1534,6 +1558,7 @@ test "PHP lexer" {
         \\ || && 
         \\ ? :
         \\ + - * / > < >= <= 
+        \\ 3.001
     ;
 
     var lexer = new(input);
@@ -1662,6 +1687,9 @@ test "PHP lexer" {
     try expectEqual(token.Token.lt, lexer.nextToken());
     try expectEqual(token.Token.gte, lexer.nextToken());
     try expectEqual(token.Token.lte, lexer.nextToken());
+
+    // Float
+    try expectFloat("3.001", lexer.nextToken());
 
     // End of file
     try expectEqual(token.Token.eof, lexer.nextToken());
