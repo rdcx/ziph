@@ -5,12 +5,14 @@ pub const Object = union(enum) {
     null_: Null,
     error_: Error,
     integer: Integer,
+    boolean: Boolean,
 
     pub fn toString(self: *Object, buf: *string.String) string.String.Error!void {
         switch (self.*) {
             .null_ => |null_| try null_.toString(buf),
             .error_ => |error_| try error_.toString(buf),
             .integer => |integer| try integer.toString(buf),
+            .boolean => |boolean| try boolean.toString(buf),
         }
     }
 
@@ -19,6 +21,7 @@ pub const Object = union(enum) {
             .null_ => "Null",
             .integer => "Integer",
             .error_ => "Error",
+            .boolean => "Boolean",
         };
     }
 };
@@ -50,5 +53,17 @@ pub const Error = struct {
 pub const Null = struct {
     pub fn toString(_: Null, buf: *string.String) string.String.Error!void {
         try buf.concat("null");
+    }
+};
+
+pub const Boolean = struct {
+    value: bool,
+
+    pub fn toString(self: Boolean, buf: *string.String) string.String.Error!void {
+        if (self.value) {
+            try buf.concat("true");
+        } else {
+            try buf.concat("false");
+        }
     }
 };

@@ -208,6 +208,18 @@ pub const Lexer = struct {
         tok = self.detectQuestionMark();
         if (tok != null) return tok.?;
 
+        tok = self.detectAsterisk();
+        if (tok != null) return tok.?;
+
+        tok = self.detectSlash();
+        if (tok != null) return tok.?;
+
+        tok = self.detectGreaterThan();
+        if (tok != null) return tok.?;
+
+        tok = self.detectLessThan();
+        if (tok != null) return tok.?;
+
         tok = self.detectEOF();
         if (tok != null) return tok.?;
 
@@ -594,6 +606,94 @@ pub const Lexer = struct {
 
         const tok = l.detectMinus().?;
         try std.testing.expect(tok == token.TokenTag.minus);
+    }
+
+    fn detectAsterisk(self: *Lexer) ?token.Token {
+        if (self.ch == '*') {
+            self.readChar();
+            return token.TokenTag.asterisk;
+        }
+        return null;
+    }
+
+    test "detectAsterisk returns asterisk token" {
+        const input = "*";
+        var l = new(input);
+
+        const tok = l.detectAsterisk().?;
+        try std.testing.expect(tok == token.TokenTag.asterisk);
+    }
+
+    fn detectSlash(self: *Lexer) ?token.Token {
+        if (self.ch == '/') {
+            self.readChar();
+            return token.TokenTag.slash;
+        }
+        return null;
+    }
+
+    test "detectSlash returns slash token" {
+        const input = "/";
+        var l = new(input);
+
+        const tok = l.detectSlash().?;
+        try std.testing.expect(tok == token.TokenTag.slash);
+    }
+
+    fn detectGreaterThan(self: *Lexer) ?token.Token {
+        if (self.ch == '>') {
+            self.readChar();
+            if (self.ch == '=') {
+                self.readChar();
+                return token.TokenTag.gte;
+            }
+            return token.TokenTag.gt;
+        }
+        return null;
+    }
+
+    test "detectGreaterThan returns gt token" {
+        const input = ">";
+        var l = new(input);
+
+        const tok = l.detectGreaterThan().?;
+        try std.testing.expect(tok == token.TokenTag.gt);
+    }
+
+    test "detectGreaterThan returns gte token" {
+        const input = ">=";
+        var l = new(input);
+
+        const tok = l.detectGreaterThan().?;
+        try std.testing.expect(tok == token.TokenTag.gte);
+    }
+
+    fn detectLessThan(self: *Lexer) ?token.Token {
+        if (self.ch == '<') {
+            self.readChar();
+            if (self.ch == '=') {
+                self.readChar();
+                return token.TokenTag.lte;
+            }
+            return token.TokenTag.lt;
+        }
+        return null;
+    }
+
+    test "detectLessThan returns lt token" {
+        const input = "<";
+        var l = new(input);
+
+        const tok = l.detectLessThan().?;
+        try std.testing.expect(tok == token.TokenTag.lt);
+    }
+
+    test "detectLessThan returns lte token" {
+        const input = "<=";
+        var l = new(input);
+
+        const tok = l.detectLessThan().?;
+        try std.testing.expect(tok == token.TokenTag.lte);
     }
 
     fn detectAssign(self: *Lexer) ?token.Token {
@@ -1433,6 +1533,7 @@ test "PHP lexer" {
         \\ function withParameter(string $a, #[\SensitiveParameter] string $b) { }
         \\ || && 
         \\ ? :
+        \\ + - * / > < >= <= 
     ;
 
     var lexer = new(input);
@@ -1551,6 +1652,16 @@ test "PHP lexer" {
     // Ternary operator
     try expectEqual(token.Token.question_mark, lexer.nextToken());
     try expectEqual(token.Token.colon, lexer.nextToken());
+
+    // Arithmetic operators
+    try expectEqual(token.Token.plus, lexer.nextToken());
+    try expectEqual(token.Token.minus, lexer.nextToken());
+    try expectEqual(token.Token.asterisk, lexer.nextToken());
+    try expectEqual(token.Token.slash, lexer.nextToken());
+    try expectEqual(token.Token.gt, lexer.nextToken());
+    try expectEqual(token.Token.lt, lexer.nextToken());
+    try expectEqual(token.Token.gte, lexer.nextToken());
+    try expectEqual(token.Token.lte, lexer.nextToken());
 
     // End of file
     try expectEqual(token.Token.eof, lexer.nextToken());

@@ -89,7 +89,87 @@ pub const Evaluator = struct {
             .variable => |variable| return self.evalVariable(&variable, env),
             .identifier => |identifier| return try self.evalIdentifier(&identifier, env),
             .integer => |integer| return try util.newInteger(self.*.allocator, integer.value),
-            else => @panic("Bug: unsupported"),
+
+            .infixExpression => |infixExpression| {
+                const left = try self.evalExpression(infixExpression.left, env);
+                switch (left.*) {
+                    .error_ => return left,
+                    else => {},
+                }
+
+                const right = try self.evalExpression(infixExpression.right, env);
+                switch (right.*) {
+                    .error_ => return right,
+                    else => {},
+                }
+
+                return try self.evalInfixExpression(&infixExpression.operator, left, right);
+            },
+            // else => @panic("Bug: unsupported"),
+        }
+    }
+
+    fn evalInfixExpression(self: *Self, operator: *const ast.Operator, left: *object.Object, right: *object.Object) EvalError!*object.Object {
+        switch (left.*) {
+            .integer => |leftInteger| {
+                switch (right.*) {
+                    .integer => |rightInteger| return try self.evalIntegerInfixExpression(operator, &leftInteger, &rightInteger),
+                    else => return util.newError(
+                        self.allocator,
+                        "type mismatch: {s} {s} {s}",
+                        .{ left.typeName(), operator.toString(), right.typeName() },
+                    ),
+                }
+            },
+            else => {
+                switch (operator.*) {
+                    // .equal => return nativeBoolToBooleanObject(self.compareObject(left, right)),
+                    // .notEqual => return nativeBoolToBooleanObject(!self.compareObject(left, right)),
+                    else => {
+                        if (std.mem.eql(u8, @tagName(left.*), @tagName(right.*))) {
+                            return try util.newError(
+                                self.allocator,
+                                "unknown operator: {s} {s} {s}",
+                                .{ left.typeName(), operator.toString(), right.typeName() },
+                            );
+                        } else {
+                            return try util.newError(
+                                self.allocator,
+                                "type mismatch: {s} {s} {s}",
+                                .{ left.typeName(), operator.toString(), right.typeName() },
+                            );
+                        }
+                    },
+                }
+            },
+        }
+    }
+
+    fn evalIntegerInfixExpression(self: *Self, operator: *const ast.Operator, left: *const object.Integer, right: *const object.Integer) EvalError!*object.Object {
+        switch (operator.*) {
+            .plus => return util.newInteger(self.allocator, left.*.value + right.*.value),
+            .minus => return util.newInteger(self.allocator, left.*.value - right.*.value),
+            .asterisk => return util.newInteger(self.allocator, left.*.value * right.*.value),
+            .slash => return util.newInteger(self.allocator, @divFloor(left.*.value, right.*.value)),
+            .lt => return nativeBoolToBooleanObject(left.*.value < right.*.value),
+            .gt => return nativeBoolToBooleanObject(left.*.value > right.*.value),
+            .lte => return nativeBoolToBooleanObject(left.*.value <= right.*.value),
+            .gte => return nativeBoolToBooleanObject(left.*.value >= right.*.value),
+            .equal => return nativeBoolToBooleanObject(left.*.value == right.*.value),
+            .notEqual => return nativeBoolToBooleanObject(left.*.value != right.*.value),
+            else => return util.newError(
+                self.allocator,
+                "unknown operator: Integer {s} Integer",
+                .{operator.toString()},
+            ),
+        }
+    }
+
+    fn nativeBoolToBooleanObject(native: bool) *object.Object {
+        if (native) {
+            return &builtin.TRUE_OBJECT;
+        } else {
+            return &builtin.FALSE_OBJECT;
         }
     }
 };

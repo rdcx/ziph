@@ -130,6 +130,8 @@ pub const Operator = enum {
     notEqual,
     lt,
     gt,
+    lte,
+    gte,
 
     pub fn toString(self: Operator) []const u8 {
         return switch (self) {
@@ -143,6 +145,8 @@ pub const Operator = enum {
             .notEqual => "!=",
             .lt => "<",
             .gt => ">",
+            .lte => "<=",
+            .gte => ">=",
         };
     }
 };

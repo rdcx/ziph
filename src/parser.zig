@@ -42,6 +42,7 @@ const Priority = enum(u4) {
             .equal => .equals,
             .not_equal => .equals,
             .plus => .sum,
+            .asterisk => .product,
             .minus => .sum,
             .left_paren => .call,
             .left_bracket => .index,
@@ -55,6 +56,12 @@ fn getOperatorFromToken(tok: token.TokenTag) !ast.Operator {
         .assign => .assign,
         .plus => .plus,
         .minus => .minus,
+        .asterisk => .asterisk,
+        .slash => .slash,
+        .gt => .gt,
+        .lt => .lt,
+        .gte => .gte,
+        .lte => .lte,
         .bang => .bang,
         .equal => .equal,
         .not_equal => .notEqual,
@@ -182,7 +189,7 @@ pub const Parser = struct {
     fn parseInfixExpressionByToken(self: *Self, tok: token.TokenTag, left: *ast.Expression) ParserError!ast.Expression {
         self.nextToken();
         return switch (tok) {
-            .plus, .minus, .equal, .not_equal => ast.Expression{ .infixExpression = try self.parseInfixExpression(left) },
+            .plus, .minus, .asterisk, .slash, .gt, .lt, .gte, .lte, .equal, .not_equal => ast.Expression{ .infixExpression = try self.parseInfixExpression(left) },
             else => ParserError.InvalidInfix,
         };
     }
@@ -257,19 +264,29 @@ fn expectInteger(expected: *const ast.Integer, actual: *const ast.Integer) !void
     try expectEqual(expected.*.value, actual.*.value);
 }
 
-fn expectVariableStatement(expected: *const ast.Variable, actual: *const ast.Variable) !void {
-    try expectIdentifier(&expected.*.name, &actual.*.name);
+fn expectVariable(expected: *const ast.Variable, actual: *const ast.Variable) !void {
+    try expectEqualStrings(expected.*.value, actual.*.value);
+}
+
+fn expectAssignmentStatement(expected: *const ast.Assignment, actual: *const ast.Assignment) !void {
+    try expectVariable(&expected.*.name, &actual.*.name);
     try expectExpression(expected.*.value, actual.*.value);
 }
 
-fn expectVariableStatementByStatement(expected: *const ast.Variable, actual: *const ast.Statement) !void {
+fn expectAssignmentStatementByStatement(expected: *const ast.Assignment, actual: *const ast.Statement) !void {
     switch (actual.*) {
-        .variable => |variable| try expectVariableStatement(expected, &variable),
+        .assignment => |assignment| try expectAssignmentStatement(expected, &assignment),
         else => {
-            std.debug.print("expected .variable, found {}\n", .{actual});
-            return error.TestExpectedVariableStatementByStatement;
+            std.debug.print("expected .assignment, found {}\n", .{actual});
+            return error.TestExpectedAssignmentStatementByStatement;
         },
     }
+}
+
+fn expectInfixExpression(expected: *const ast.InfixExpression, actual: *const ast.InfixExpression) anyerror!void {
+    try expectExpression(expected.*.left, actual.*.left);
+    try expectEqual(expected.*.operator, actual.*.operator);
+    try expectExpression(expected.*.right, actual.*.right);
 }
 
 fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expression) !void {
@@ -283,6 +300,15 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
                 },
             }
         },
+        .infixExpression => {
+            switch (actual.*) {
+                .infixExpression => |infixExpression| try expectInfixExpression(&expected.*.infixExpression, &infixExpression),
+                else => {
+                    std.debug.print("expected .infixExpression, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
         else => {
             std.debug.print("unsupported {}\n", .{expected});
             return error.TestExpectedExpression;
@@ -292,7 +318,7 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
 
 fn expectStatement(expected: *const ast.Statement, actual: *const ast.Statement) !void {
     switch (expected.*) {
-        .variable => |variable| try expectVariableStatementByStatement(&variable, actual),
+        .assignment => |assignment| try expectAssignmentStatementByStatement(&assignment, actual),
         .expressionStatement => |expressionStatement| try expectExpressionStatementByStatement(&expressionStatement, actual),
         // else => {
         //     std.debug.print("unsupported {}\n", .{expected});
@@ -315,15 +341,34 @@ fn expectExpressionStatementByStatement(expected: *const ast.ExpressionStatement
     }
 }
 
-test "variable statements" {
+test "assignment statements" {
     {
         try parseProgramForTesting("$x = 5;", struct {
             fn function(program: *const ast.Program) !void {
                 var integer = ast.Expression{ .integer = ast.Integer{ .value = 5 } };
                 try expectOneStatementInProgram(&ast.Statement{
-                    .variable = ast.Variable{
-                        .name = ast.Identifier{ .value = "x" },
+                    .assignment = ast.Assignment{
+                        .name = ast.Variable{ .value = "x" },
                         .value = &integer,
+                    },
+                }, program);
+            }
+        }.function);
+    }
+
+    {
+        try parseProgramForTesting("$y = 20 * 20;", struct {
+            fn function(program: *const ast.Program) !void {
+                var left = ast.Expression{ .integer = ast.Integer{ .value = 20 } };
+                var right = ast.Expression{ .integer = ast.Integer{ .value = 20 } };
+
+                const infixExpression = ast.InfixExpression{ .left = &left, .operator = ast.Operator.asterisk, .right = &right };
+
+                var expression = ast.Expression{ .infixExpression = infixExpression };
+                try expectOneStatementInProgram(&ast.Statement{
+                    .assignment = ast.Assignment{
+                        .name = ast.Variable{ .value = "y" },
+                        .value = &expression,
                     },
                 }, program);
             }
