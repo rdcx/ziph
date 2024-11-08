@@ -19,3 +19,19 @@ pub fn newInteger(allocator: std.mem.Allocator, value: i64) !*object.Object {
     };
     return integerPtr;
 }
+
+pub fn newFloat(allocator: std.mem.Allocator, value: f64) !*object.Object {
+    const floatPtr = allocator.create(object.Object) catch return EvaluatorError.MemoryAllocation;
+    floatPtr.* = object.Object{
+        .float = object.Float{ .value = value },
+    };
+    return floatPtr;
+}
+
+pub fn newFloatFromInteger(allocator: std.mem.Allocator, value: i64) !*object.Object {
+    return newFloat(allocator, @floatFromInt(value));
+}
+
+pub fn newIntegerFromFloat(allocator: std.mem.Allocator, value: f64) !*object.Object {
+    return newInteger(allocator, @round(value));
+}

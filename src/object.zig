@@ -13,6 +13,7 @@ pub const Object = union(enum) {
             .null_ => |null_| try null_.toString(buf),
             .error_ => |error_| try error_.toString(buf),
             .integer => |integer| try integer.toString(buf),
+            .float => |float| try float.toString(buf),
             .boolean => |boolean| try boolean.toString(buf),
         }
     }
@@ -21,6 +22,7 @@ pub const Object = union(enum) {
         return switch (self) {
             .null_ => "Null",
             .integer => "Integer",
+            .float => "Float",
             .error_ => "Error",
             .boolean => "Boolean",
         };

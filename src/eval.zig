@@ -90,6 +90,7 @@ pub const Evaluator = struct {
             .variable => |variable| return self.evalVariable(&variable, env),
             .identifier => |identifier| return try self.evalIdentifier(&identifier, env),
             .integer => |integer| return try util.newInteger(self.*.allocator, integer.value),
+            .float => |float| return try util.newFloat(self.*.allocator, float.value),
 
             .infixExpression => |infixExpression| {
                 const left = try self.evalExpression(infixExpression.left, env);
@@ -126,6 +127,17 @@ pub const Evaluator = struct {
             .integer => |leftInteger| {
                 switch (right.*) {
                     .integer => |rightInteger| return try self.evalIntegerInfixExpression(operator, &leftInteger, &rightInteger),
+                    .float => |rightFloat| {
+                        const convObje = try util.newFloatFromInteger(
+                            self.allocator,
+                            leftInteger.value,
+                        );
+                        return try self.evalFloatInfixExpression(
+                            operator,
+                            &rightFloat,
+                            &convObje.float,
+                        );
+                    },
                     else => return util.newError(
                         self.allocator,
                         "type mismatch: {s} {s} {s}",
@@ -133,6 +145,29 @@ pub const Evaluator = struct {
                     ),
                 }
             },
+
+            .float => |leftFloat| {
+                switch (right.*) {
+                    .float => |rightFloat| return try self.evalFloatInfixExpression(operator, &leftFloat, &rightFloat),
+                    .integer => |rightInteger| {
+                        const convObj = try util.newFloatFromInteger(
+                            self.allocator,
+                            rightInteger.value,
+                        );
+                        return try self.evalFloatInfixExpression(
+                            operator,
+                            &leftFloat,
+                            &convObj.float,
+                        );
+                    },
+                    else => return util.newError(
+                        self.allocator,
+                        "type mismatch: {s} {s} {s}",
+                        .{ left.typeName(), operator.toString(), right.typeName() },
+                    ),
+                }
+            },
+
             else => {
                 switch (operator.*) {
                     // .equal => return nativeBoolToBooleanObject(self.compareObject(left, right)),
@@ -172,6 +207,26 @@ pub const Evaluator = struct {
             else => return util.newError(
                 self.allocator,
                 "unknown operator: Integer {s} Integer",
+                .{operator.toString()},
+            ),
+        }
+    }
+
+    fn evalFloatInfixExpression(self: *Self, operator: *const ast.Operator, left: *const object.Float, right: *const object.Float) EvalError!*object.Object {
+        switch (operator.*) {
+            .plus => return util.newFloat(self.allocator, left.*.value + right.*.value),
+            .minus => return util.newFloat(self.allocator, left.*.value - right.*.value),
+            .asterisk => return util.newFloat(self.allocator, left.*.value * right.*.value),
+            .slash => return util.newFloat(self.allocator, left.*.value / right.*.value),
+            .lt => return nativeBoolToBooleanObject(left.*.value < right.*.value),
+            .gt => return nativeBoolToBooleanObject(left.*.value > right.*.value),
+            .lte => return nativeBoolToBooleanObject(left.*.value <= right.*.value),
+            .gte => return nativeBoolToBooleanObject(left.*.value >= right.*.value),
+            .equal => return nativeBoolToBooleanObject(left.*.value == right.*.value),
+            .notEqual => return nativeBoolToBooleanObject(left.*.value != right.*.value),
+            else => return util.newError(
+                self.allocator,
+                "unknown operator: Float {s} Float",
                 .{operator.toString()},
             ),
         }

@@ -19,6 +19,7 @@ pub const ParserError = error{
     ExpectPeek,
     InvalidInfix,
     InvalidInteger,
+    InvalidFloat,
     InvalidIntegerLiteral,
     ExpectOperator,
 };
@@ -229,6 +230,7 @@ pub const Parser = struct {
                 return ast.Expression{ .variable = ast.Variable{ .value = try self.parseVariable() } };
             },
             .integer_literal => ast.Expression{ .integer = try self.parseInteger() },
+            .float_literal => ast.Expression{ .float = try self.parseFloat() },
             .left_paren => try self.parseGroupedExpression(),
             else => {
                 std.debug.print("unsupported {}\n", .{tok});
@@ -269,6 +271,13 @@ pub const Parser = struct {
             else => ParserError.InvalidIntegerLiteral,
         };
     }
+
+    fn parseFloat(self: Self) ParserError!ast.Float {
+        return switch (self.curToken) {
+            .float_literal => |value| ast.Float{ .value = std.fmt.parseFloat(f64, value) catch return ParserError.InvalidFloat },
+            else => ParserError.InvalidIntegerLiteral,
+        };
+    }
 };
 
 test "Parser.new" {
@@ -305,6 +314,10 @@ fn expectInteger(expected: *const ast.Integer, actual: *const ast.Integer) !void
     try expectEqual(expected.*.value, actual.*.value);
 }
 
+fn expectFloat(expected: *const ast.Float, actual: *const ast.Float) !void {
+    try expectEqual(expected.*.value, actual.*.value);
+}
+
 fn expectVariable(expected: *const ast.Variable, actual: *const ast.Variable) !void {
     try expectEqualStrings(expected.*.value, actual.*.value);
 }
@@ -337,6 +350,15 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
                 .integer => |integer| try expectInteger(&expected.*.integer, &integer),
                 else => {
                     std.debug.print("expected .integer, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+        .float => {
+            switch (actual.*) {
+                .float => |float| try expectFloat(&expected.*.float, &float),
+                else => {
+                    std.debug.print("expected .float, found {}\n", .{actual});
                     return error.TestExpectedExpression;
                 },
             }
@@ -447,6 +469,17 @@ test "expression statements" {
                 try expectOneStatementInProgram(&ast.Statement{
                     .expressionStatement = ast.ExpressionStatement{ .expression = &integer },
                 }, program);
+            }
+        }.function);
+    }
+
+    {
+        try parseProgramForTesting("33.203;", struct {
+            fn function(progam: *const ast.Program) !void {
+                var float = ast.Expression{ .float = ast.Float{ .value = 33.203 } };
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{ .expression = &float },
+                }, progam);
             }
         }.function);
     }

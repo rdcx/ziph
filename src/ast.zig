@@ -37,6 +37,7 @@ pub const Expression = union(enum) {
     variable: Variable,
     identifier: Identifier,
     integer: Integer,
+    float: Float,
     infixExpression: InfixExpression,
 
     pub fn toString(self: *Expression, buf: *String) String.Error!void {
@@ -46,6 +47,7 @@ pub const Expression = union(enum) {
             .variable => |*variable| try variable.toString(buf),
             .identifier => |*identifier| try identifier.toString(buf),
             .infixExpression => |infixExpression| try infixExpression.toString(buf),
+            .float => |float| try float.toString(buf),
         }
     }
 };
@@ -121,6 +123,15 @@ pub const Integer = struct {
     pub fn toString(self: Integer, buf: *String) String.Error!void {
         const intString = try std.fmt.allocPrint(buf.allocator, "{}", .{self.value});
         try buf.concat(intString);
+    }
+};
+
+pub const Float = struct {
+    value: f64,
+
+    pub fn toString(self: Float, buf: *String) String.Error!void {
+        const floatString = try std.fmt.allocPrint(buf.allocator, "{}", .{self.value});
+        try buf.concat(floatString);
     }
 };
 
