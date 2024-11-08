@@ -9,7 +9,7 @@ test {
     std.testing.refAllDecls(@This());
 }
 
-const Lexer = struct {
+pub const Lexer = struct {
     input: []const u8,
     position: usize,
     read_position: usize,
@@ -1396,6 +1396,18 @@ fn expectInt(expected: []const u8, actual: token.Token) !void {
 fn expectStringLiteral(expected: []const u8, actual: token.Token) !void {
     try expect(actual == .string_double_quote_literal or actual == .string_single_quote_literal);
     try expectStringInnerToken(expected, actual);
+}
+
+test "EOF lexer" {
+    const input = "$x = 10;";
+    var lexer = new(input);
+
+    try expectVariable("x", lexer.nextToken());
+    try expectEqual(token.Token.assign, lexer.nextToken());
+    try expectInt("10", lexer.nextToken());
+    try expectEqual(token.Token.semicolon, lexer.nextToken());
+
+    try expectEqual(token.Token.eof, lexer.nextToken());
 }
 
 test "PHP lexer" {
