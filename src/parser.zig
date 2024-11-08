@@ -119,10 +119,10 @@ pub const Parser = struct {
     fn parseStatement(self: *Self) ParserError!ast.Statement {
         return switch (self.curToken) {
             .variable => {
-                if (!self.peekTokenIs(.assign)) {
-                    return ast.Statement{ .expressionStatement = try self.parseExpressionStatement() };
+                if (self.peekTokenIs(.assign)) {
+                    return ast.Statement{ .assignment = try self.parseAssignmentStatement() };
                 }
-                return ast.Statement{ .variable = try self.parseVariableStatement() };
+                return ast.Statement{ .expressionStatement = try self.parseExpressionStatement() };
             },
             else => ast.Statement{ .expressionStatement = try self.parseExpressionStatement() },
         };
@@ -139,10 +139,10 @@ pub const Parser = struct {
         return ast.ExpressionStatement{ .expression = expressionPtr };
     }
 
-    fn parseVariableStatement(self: *Self) ParserError!ast.Variable {
+    fn parseAssignmentStatement(self: *Self) ParserError!ast.Assignment {
         const name =
             switch (self.curToken) {
-            .variable => |variable| ast.Identifier{ .value = variable },
+            .variable => |variable| ast.Variable{ .value = variable },
             else => unreachable,
         };
 
@@ -163,7 +163,7 @@ pub const Parser = struct {
 
         const expressionPtr = self.allocator.create(ast.Expression) catch return ParserError.MemoryAllocation;
         expressionPtr.* = expression;
-        return ast.Variable{ .name = name, .value = expressionPtr };
+        return ast.Assignment{ .name = name, .value = expressionPtr };
     }
 
     fn parseExpression(self: *Self, precedende: Priority) ParserError!ast.Expression {
@@ -202,16 +202,16 @@ pub const Parser = struct {
 
     fn parseExpressionByPrefixToken(self: *Self, tok: token.TokenTag) ParserError!ast.Expression {
         return switch (tok) {
-            .variable => ast.Expression{ .identifier = try self.parseIdentifier() },
+            .variable => ast.Expression{ .variable = ast.Variable{ .value = try self.parseVariable() } },
             .integer_literal => ast.Expression{ .integer = try self.parseInteger() },
             else => ParserError.InvalidPrefix,
         };
     }
 
-    fn parseIdentifier(self: Self) ParserError!ast.Identifier {
+    fn parseVariable(self: Self) ParserError![]const u8 {
         return switch (self.curToken) {
-            .variable => |variable| ast.Identifier{ .value = variable },
-            else => ParserError.InvalidProgram,
+            .variable => |value| value,
+            else => unreachable,
         };
     }
 

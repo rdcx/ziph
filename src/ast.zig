@@ -33,6 +33,7 @@ pub const Program = struct {
 };
 
 pub const Expression = union(enum) {
+    variable: Variable,
     identifier: Identifier,
     integer: Integer,
     infixExpression: InfixExpression,
@@ -61,7 +62,7 @@ pub const InfixExpression = struct {
 };
 
 pub const Statement = union(enum) {
-    variable: Variable,
+    assignment: Assignment,
     expressionStatement: ExpressionStatement,
 
     pub fn toString(self: *Statement, buf: *String) !void {
@@ -80,9 +81,19 @@ pub const ExpressionStatement = struct {
     }
 };
 
-pub const Variable = struct {
-    name: Identifier,
+pub const Assignment = struct {
+    name: Variable,
     value: *Expression,
+
+    pub fn toString(self: *Assignment, buf: *String) !void {
+        try self.name.toString(buf);
+        try buf.concat(" = ");
+        try self.value.toString(buf);
+    }
+};
+
+pub const Variable = struct {
+    value: []const u8,
 
     pub fn toString(self: *Variable, buf: *String) !void {
         try buf.concat(self.name.value);

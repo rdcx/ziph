@@ -50,6 +50,15 @@ pub const Evaluator = struct {
         return result;
     }
 
+    fn evalVariable(self: *Self, variable: *const ast.Variable, env: *Env) EvalError!*object.Object {
+        const value = env.*.get(variable.value);
+        if (value) |val| {
+            return val;
+        }
+
+        return util.newError(self.allocator, "variable not found: '${s}'", .{variable.*.value});
+    }
+
     fn evalIdentifier(self: *Self, identifier: *const ast.Identifier, env: *Env) EvalError!*object.Object {
         const value = env.*.get(identifier.*.value);
         if (value) |val| {
@@ -62,14 +71,14 @@ pub const Evaluator = struct {
     fn evalStatement(self: *Self, statement: *ast.Statement, env: *Env) EvalError!*object.Object {
         switch (statement.*) {
             .expressionStatement => |expressionStatement| return self.evalExpression(expressionStatement.expression, env),
-            .variable => |variable| {
-                const value = try self.evalExpression(variable.value, env);
+            .assignment => |assignment| {
+                const value = try self.evalExpression(assignment.value, env);
                 switch (value.*) {
                     .error_ => return value,
                     else => {},
                 }
 
-                try env.*.insert(variable.name.value, value);
+                try env.*.insert(assignment.name.value, value);
                 return &builtin.NULL_OBJECT;
             },
         }
@@ -77,6 +86,7 @@ pub const Evaluator = struct {
 
     fn evalExpression(self: *Self, expression: *ast.Expression, env: *Env) EvalError!*object.Object {
         switch (expression.*) {
+            .variable => |variable| return self.evalVariable(&variable, env),
             .identifier => |identifier| return try self.evalIdentifier(&identifier, env),
             .integer => |integer| return try util.newInteger(self.*.allocator, integer.value),
             else => @panic("Bug: unsupported"),
