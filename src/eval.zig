@@ -86,6 +86,7 @@ pub const Evaluator = struct {
 
     fn evalExpression(self: *Self, expression: *ast.Expression, env: *Env) EvalError!*object.Object {
         switch (expression.*) {
+            .assignment => |assignment| return self.evalAssignment(&assignment, env),
             .variable => |variable| return self.evalVariable(&variable, env),
             .identifier => |identifier| return try self.evalIdentifier(&identifier, env),
             .integer => |integer| return try util.newInteger(self.*.allocator, integer.value),
@@ -107,6 +108,17 @@ pub const Evaluator = struct {
             },
             // else => @panic("Bug: unsupported"),
         }
+    }
+
+    fn evalAssignment(self: *Self, assignment: *const ast.Assignment, env: *Env) EvalError!*object.Object {
+        const value = try self.evalExpression(assignment.value, env);
+        switch (value.*) {
+            .error_ => return value,
+            else => {},
+        }
+
+        try env.*.insert(assignment.name.value, value);
+        return value;
     }
 
     fn evalInfixExpression(self: *Self, operator: *const ast.Operator, left: *object.Object, right: *object.Object) EvalError!*object.Object {

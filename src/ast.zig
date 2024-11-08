@@ -33,6 +33,7 @@ pub const Program = struct {
 };
 
 pub const Expression = union(enum) {
+    assignment: Assignment,
     variable: Variable,
     identifier: Identifier,
     integer: Integer,
@@ -41,6 +42,10 @@ pub const Expression = union(enum) {
     pub fn toString(self: *Expression, buf: *String) String.Error!void {
         switch (self.*) {
             .integer => |integer| try integer.toString(buf),
+            .assignment => |*assignment| try assignment.toString(buf),
+            .variable => |*variable| try variable.toString(buf),
+            .identifier => |*identifier| try identifier.toString(buf),
+            .infixExpression => |infixExpression| try infixExpression.toString(buf),
         }
     }
 };

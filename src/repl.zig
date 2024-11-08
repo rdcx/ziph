@@ -38,7 +38,8 @@ pub fn start() !void {
         };
 
         switch (object.*) {
-            .error_ => try stdout.print("Error: {}\n", .{object}),
+            .error_ => try stdout.print("Error: {s}\n", .{object.error_.message}),
+
             else => {
                 var objPrintBuf = String.init(allocator);
                 try object.toString(&objPrintBuf);

@@ -125,6 +125,14 @@ pub const Parser = struct {
 
     fn parseStatement(self: *Self) ParserError!ast.Statement {
         return switch (self.curToken) {
+            .open_tag => {
+                self.nextToken();
+                return try self.parseStatement();
+            },
+            .close_tag => {
+                self.nextToken();
+                return try self.parseStatement();
+            },
             .variable => {
                 if (self.peekTokenIs(.assign)) {
                     return ast.Statement{ .assignment = try self.parseAssignmentStatement() };
@@ -209,10 +217,27 @@ pub const Parser = struct {
 
     fn parseExpressionByPrefixToken(self: *Self, tok: token.TokenTag) ParserError!ast.Expression {
         return switch (tok) {
-            .variable => ast.Expression{ .variable = ast.Variable{ .value = try self.parseVariable() } },
+            .variable => {
+                if (self.peekTokenIs(.assign)) {
+                    return ast.Expression{ .assignment = try self.parseAssignmentExpression() };
+                }
+                return ast.Expression{ .variable = ast.Variable{ .value = try self.parseVariable() } };
+            },
             .integer_literal => ast.Expression{ .integer = try self.parseInteger() },
             else => ParserError.InvalidPrefix,
         };
+    }
+
+    fn parseAssignmentExpression(self: *Self) ParserError!ast.Assignment {
+        const name = ast.Variable{ .value = try self.parseVariable() };
+        try self.expectPeek(.assign);
+        self.nextToken();
+
+        const value = try self.parseExpression(.lowest);
+        const valuePtr = self.allocator.create(ast.Expression) catch return ParserError.MemoryAllocation;
+        valuePtr.* = value;
+
+        return ast.Assignment{ .name = name, .value = valuePtr };
     }
 
     fn parseVariable(self: Self) ParserError![]const u8 {
@@ -368,6 +393,28 @@ test "assignment statements" {
                 try expectOneStatementInProgram(&ast.Statement{
                     .assignment = ast.Assignment{
                         .name = ast.Variable{ .value = "y" },
+                        .value = &expression,
+                    },
+                }, program);
+            }
+        }.function);
+    }
+
+    {
+        try parseProgramForTesting("$a = $b = 10;", struct {
+            fn function(program: *const ast.Program) !void {
+                var integer = ast.Expression{ .integer = ast.Integer{ .value = 10 } };
+
+                const assignment = ast.Assignment{
+                    .name = ast.Variable{ .value = "b" },
+                    .value = &integer,
+                };
+
+                var expression = ast.Expression{ .assignment = assignment };
+
+                try expectOneStatementInProgram(&ast.Statement{
+                    .assignment = ast.Assignment{
+                        .name = ast.Variable{ .value = "a" },
                         .value = &expression,
                     },
                 }, program);
