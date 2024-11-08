@@ -219,10 +219,10 @@ fn parseProgramForTesting(actualInput: []const u8, expecting: fn (*const ast.Pro
 
 fn expectOneStatementInProgram(
     expected: *const ast.Statement,
-    actual: *const ast.Program,
+    program: *const ast.Program,
 ) !void {
-    try expectEqual(@as(usize, 1), actual.*.statements.items.len);
-    try expectStatement(expected, &actual.*.statements.items[0]);
+    try expectEqual(@as(usize, 1), program.*.statements.items.len);
+    try expectStatement(expected, &program.*.statements.items[0]);
 }
 
 fn expectIdentifier(expected: *const ast.Identifier, actual: *const ast.Identifier) !void {
@@ -241,10 +241,10 @@ fn expectVariableStatement(expected: *const ast.Variable, actual: *const ast.Var
 fn expectVariableStatementByStatement(expected: *const ast.Variable, actual: *const ast.Statement) !void {
     switch (actual.*) {
         .variable => |variable| try expectVariableStatement(expected, &variable),
-        else => {
-            std.debug.print("expected .variable, found {}\n", .{actual});
-            return error.TestExpectedVariableStatementByStatement;
-        },
+        // else => {
+        //     std.debug.print("expected .variable, found {}\n", .{actual});
+        //     return error.TestExpectedVariableStatementByStatement;
+        // },
     }
 }
 
@@ -268,7 +268,7 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
 
 fn expectStatement(expected: *const ast.Statement, actual: *const ast.Statement) !void {
     switch (expected.*) {
-        .variable => |variable| try expectVariableStatement(&variable, actual),
+        .variable => |variable| try expectVariableStatementByStatement(&variable, actual),
         // else => {
         //     std.debug.print("unsupported {}\n", .{expected});
         //     return error.TestExpectedStatement;
@@ -281,10 +281,12 @@ test "variable statements" {
         try parseProgramForTesting("$x = 5;", struct {
             fn function(program: *const ast.Program) !void {
                 var integer = ast.Expression{ .integer = ast.Integer{ .value = 5 } };
-                try expectOneStatementInProgram(&ast.Statement{ .variable = ast.Variable{
-                    .name = ast.Identifier{ .value = "x" },
-                    .value = &integer,
-                } }, program);
+                try expectOneStatementInProgram(&ast.Statement{
+                    .variable = ast.Variable{
+                        .name = ast.Identifier{ .value = "x" },
+                        .value = &integer,
+                    },
+                }, program);
             }
         }.function);
     }
