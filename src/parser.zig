@@ -229,6 +229,8 @@ pub const Parser = struct {
                 }
                 return ast.Expression{ .variable = ast.Variable{ .value = try self.parseVariable() } };
             },
+            .string_sq_literal => ast.Expression{ .string_sq_literal = try self.parseString() },
+            .string_dq_literal => ast.Expression{ .string_dq_literal = try self.parseString() },
             .integer_literal => ast.Expression{ .integer = try self.parseInteger() },
             .float_literal => ast.Expression{ .float = try self.parseFloat() },
             .left_paren => try self.parseGroupedExpression(),
@@ -236,6 +238,14 @@ pub const Parser = struct {
                 std.debug.print("unsupported {}\n", .{tok});
                 return ParserError.InvalidPrefix;
             },
+        };
+    }
+
+    fn parseString(self: Self) ParserError!ast.StringLiteral {
+        return switch (self.curToken) {
+            .string_sq_literal => |value| ast.StringLiteral{ .value = value },
+            .string_dq_literal => |value| ast.StringLiteral{ .value = value },
+            else => unreachable,
         };
     }
 
@@ -372,6 +382,26 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
                 },
             }
         },
+        .string_sq_literal => {
+            switch (actual.*) {
+                .string_dq_literal => |lit| try expectEqualStrings(expected.*.string_sq_literal.value, lit.value),
+                else => {
+                    std.debug.print("expected .string, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+
+        .string_dq_literal => {
+            switch (actual.*) {
+                .string_dq_literal => |lit| try expectEqualStrings(expected.*.string_dq_literal.value, lit.value),
+                else => {
+                    std.debug.print("expected .string, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+
         else => {
             std.debug.print("unsupported {}\n", .{expected});
             return error.TestExpectedExpression;
@@ -480,6 +510,17 @@ test "expression statements" {
                 try expectOneStatementInProgram(&ast.Statement{
                     .expressionStatement = ast.ExpressionStatement{ .expression = &float },
                 }, progam);
+            }
+        }.function);
+    }
+
+    {
+        try parseProgramForTesting("\"hello\";", struct {
+            fn function(program: *const ast.Program) !void {
+                var str = ast.Expression{ .string_dq_literal = ast.StringLiteral{ .value = "hello" } };
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{ .expression = &str },
+                }, program);
             }
         }.function);
     }

@@ -7,6 +7,7 @@ pub const Object = union(enum) {
     integer: Integer,
     boolean: Boolean,
     float: Float,
+    string: String,
 
     pub fn toString(self: *Object, buf: *string.String) string.String.Error!void {
         switch (self.*) {
@@ -15,6 +16,7 @@ pub const Object = union(enum) {
             .integer => |integer| try integer.toString(buf),
             .float => |float| try float.toString(buf),
             .boolean => |boolean| try boolean.toString(buf),
+            .string => |str| try str.toString(buf),
         }
     }
 
@@ -25,7 +27,25 @@ pub const Object = union(enum) {
             .float => "Float",
             .error_ => "Error",
             .boolean => "Boolean",
+            .string => "String",
         };
+    }
+};
+
+pub const Error = struct {
+    message: []const u8,
+
+    pub fn toString(self: Error, buf: *string.String) string.String.Error!void {
+        try buf.concat("Error: ");
+        try buf.concat(self.message);
+    }
+};
+
+pub const String = struct {
+    value: []const u8,
+
+    pub fn toString(self: String, buf: *string.String) string.String.Error!void {
+        try buf.concat(self.value);
     }
 };
 
@@ -41,15 +61,6 @@ pub const Integer = struct {
     pub fn toString(self: Integer, buf: *string.String) string.String.Error!void {
         const intString = try std.fmt.allocPrint(buf.allocator, "{}", .{self.value});
         try buf.concat(intString);
-    }
-};
-
-pub const Error = struct {
-    message: []const u8,
-
-    pub fn toString(self: Error, buf: *string.String) string.String.Error!void {
-        try buf.concat("Error: ");
-        try buf.concat(self.message);
     }
 };
 

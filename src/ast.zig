@@ -38,6 +38,8 @@ pub const Expression = union(enum) {
     identifier: Identifier,
     integer: Integer,
     float: Float,
+    string_sq_literal: StringLiteral,
+    string_dq_literal: StringLiteral,
     infixExpression: InfixExpression,
 
     pub fn toString(self: *Expression, buf: *String) String.Error!void {
@@ -113,6 +115,14 @@ pub const Identifier = struct {
     value: []const u8,
 
     pub fn toString(self: *Identifier, buf: *String) !void {
+        try buf.concat(self.value);
+    }
+};
+
+pub const StringLiteral = struct {
+    value: []const u8,
+
+    pub fn toString(self: StringLiteral, buf: *String) String.Error!void {
         try buf.concat(self.value);
     }
 };

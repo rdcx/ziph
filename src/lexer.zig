@@ -757,7 +757,7 @@ pub const Lexer = struct {
             }
             const str = self.input[position..self.position];
             self.readChar();
-            return token.Token{ .string_double_quote_literal = str };
+            return token.Token{ .string_dq_literal = str };
         }
 
         if (self.ch == '\'') {
@@ -768,27 +768,27 @@ pub const Lexer = struct {
             }
             const str = self.input[position..self.position];
             self.readChar();
-            return token.Token{ .string_single_quote_literal = str };
+            return token.Token{ .string_sq_literal = str };
         }
         return null;
     }
 
-    test "detectString returns string_double_quote_literal token" {
+    test "detectString returns string_dq_literal token" {
         const input = "\"Hello, World!\"";
         var l = new(input);
 
         const tok = l.detectString().?;
-        try std.testing.expect(tok == token.TokenTag.string_double_quote_literal);
-        try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.string_double_quote_literal));
+        try std.testing.expect(tok == token.TokenTag.string_dq_literal);
+        try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.string_dq_literal));
     }
 
-    test "detectString returns string_single_quote_literal token" {
+    test "detectString returns string_sq_literal token" {
         const input = "'Hello, World!'";
         var l = new(input);
 
         const tok = l.detectString().?;
-        try std.testing.expect(tok == token.TokenTag.string_single_quote_literal);
-        try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.string_single_quote_literal));
+        try std.testing.expect(tok == token.TokenTag.string_sq_literal);
+        try std.testing.expect(std.mem.eql(u8, "Hello, World!", tok.string_sq_literal));
     }
 
     fn detectLeftBracket(self: *Lexer) ?token.Token {
@@ -1492,7 +1492,7 @@ test "Test isBackslash" {
 // test utils
 fn expectStringInnerToken(expected: []const u8, actual: token.Token) !void {
     switch (actual) {
-        token.Token.ident, token.Token.variable, token.Token.integer_literal, token.Token.float_literal, token.Token.string_double_quote_literal, token.Token.string_single_quote_literal => |value| try expectEqualStrings(expected, value),
+        token.Token.ident, token.Token.variable, token.Token.integer_literal, token.Token.float_literal, token.Token.string_dq_literal, token.Token.string_sq_literal => |value| try expectEqualStrings(expected, value),
         else => unreachable,
     }
 }
@@ -1513,7 +1513,7 @@ fn expectInt(expected: []const u8, actual: token.Token) !void {
 }
 
 fn expectStringLiteral(expected: []const u8, actual: token.Token) !void {
-    try expect(actual == .string_double_quote_literal or actual == .string_single_quote_literal);
+    try expect(actual == .string_dq_literal or actual == .string_sq_literal);
     try expectStringInnerToken(expected, actual);
 }
 

@@ -91,7 +91,8 @@ pub const Evaluator = struct {
             .identifier => |identifier| return try self.evalIdentifier(&identifier, env),
             .integer => |integer| return try util.newInteger(self.*.allocator, integer.value),
             .float => |float| return try util.newFloat(self.*.allocator, float.value),
-
+            .string_sq_literal => |stringLiteral| return try util.newString(self.allocator, stringLiteral.value),
+            .string_dq_literal => |stringLiteral| return try util.newString(self.allocator, stringLiteral.value),
             .infixExpression => |infixExpression| {
                 const left = try self.evalExpression(infixExpression.left, env);
                 switch (left.*) {

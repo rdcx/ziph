@@ -20,8 +20,8 @@ pub const TokenTag = enum {
     eof,
 
     // Literals
-    string_single_quote_literal,
-    string_double_quote_literal,
+    string_sq_literal,
+    string_dq_literal,
     integer_literal,
     float_literal,
     true_literal,
@@ -140,8 +140,8 @@ pub const Token = union(TokenTag) {
     eof: void,
 
     // Literals
-    string_single_quote_literal: []const u8,
-    string_double_quote_literal: []const u8,
+    string_sq_literal: []const u8,
+    string_dq_literal: []const u8,
     integer_literal: []const u8,
     float_literal: []const u8,
     true_literal: void,

@@ -4,6 +4,7 @@ const ast = @import("ast.zig");
 const object = @import("object.zig");
 const Environment = @import("env.zig").Environment;
 const EvaluatorError = @import("eval_error.zig").EvaluatorError;
+const string = @import("string.zig");
 
 pub fn newError(allocator: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !*object.Object {
     const message = std.fmt.allocPrint(allocator, fmt, args) catch return EvaluatorError.MemoryAllocation;
@@ -34,4 +35,14 @@ pub fn newFloatFromInteger(allocator: std.mem.Allocator, value: i64) !*object.Ob
 
 pub fn newIntegerFromFloat(allocator: std.mem.Allocator, value: f64) !*object.Object {
     return newInteger(allocator, @round(value));
+}
+
+pub fn newString(allocator: std.mem.Allocator, value: []const u8) !*object.Object {
+    const stringPtr = allocator.create(object.Object) catch return EvaluatorError.MemoryAllocation;
+    stringPtr.* = object.Object{
+        .string = object.String{
+            .value = value,
+        },
+    };
+    return stringPtr;
 }
