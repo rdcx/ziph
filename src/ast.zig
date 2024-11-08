@@ -62,11 +62,21 @@ pub const InfixExpression = struct {
 
 pub const Statement = union(enum) {
     variable: Variable,
+    expressionStatement: ExpressionStatement,
 
     pub fn toString(self: *Statement, buf: *String) !void {
         return switch (self.*) {
+            .expressionStatement => |expressionStatement| try expressionStatement.toString(buf),
             .variable => |*variable| try variable.toString(buf),
         };
+    }
+};
+
+pub const ExpressionStatement = struct {
+    expression: *Expression,
+
+    pub fn toString(self: ExpressionStatement, buf: *String) String.Error!void {
+        try self.expression.toString(buf);
     }
 };
 

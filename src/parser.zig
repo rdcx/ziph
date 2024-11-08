@@ -118,9 +118,25 @@ pub const Parser = struct {
 
     fn parseStatement(self: *Self) ParserError!ast.Statement {
         return switch (self.curToken) {
-            .variable => ast.Statement{ .variable = try self.parseVariableStatement() },
-            else => return ParserError.InvalidProgram,
+            .variable => {
+                if (!self.peekTokenIs(.assign)) {
+                    return ast.Statement{ .expressionStatement = try self.parseExpressionStatement() };
+                }
+                return ast.Statement{ .variable = try self.parseVariableStatement() };
+            },
+            else => ast.Statement{ .expressionStatement = try self.parseExpressionStatement() },
         };
+    }
+
+    fn parseExpressionStatement(self: *Self) ParserError!ast.ExpressionStatement {
+        const expression = try self.parseExpression(.lowest);
+        if (self.peekTokenIs(.semicolon)) {
+            self.nextToken();
+        }
+
+        const expressionPtr = self.allocator.create(ast.Expression) catch return ParserError.MemoryAllocation;
+        expressionPtr.* = expression;
+        return ast.ExpressionStatement{ .expression = expressionPtr };
     }
 
     fn parseVariableStatement(self: *Self) ParserError!ast.Variable {
@@ -186,8 +202,16 @@ pub const Parser = struct {
 
     fn parseExpressionByPrefixToken(self: *Self, tok: token.TokenTag) ParserError!ast.Expression {
         return switch (tok) {
+            .variable => ast.Expression{ .identifier = try self.parseIdentifier() },
             .integer_literal => ast.Expression{ .integer = try self.parseInteger() },
             else => ParserError.InvalidPrefix,
+        };
+    }
+
+    fn parseIdentifier(self: Self) ParserError!ast.Identifier {
+        return switch (self.curToken) {
+            .variable => |variable| ast.Identifier{ .value = variable },
+            else => ParserError.InvalidProgram,
         };
     }
 
@@ -241,10 +265,10 @@ fn expectVariableStatement(expected: *const ast.Variable, actual: *const ast.Var
 fn expectVariableStatementByStatement(expected: *const ast.Variable, actual: *const ast.Statement) !void {
     switch (actual.*) {
         .variable => |variable| try expectVariableStatement(expected, &variable),
-        // else => {
-        //     std.debug.print("expected .variable, found {}\n", .{actual});
-        //     return error.TestExpectedVariableStatementByStatement;
-        // },
+        else => {
+            std.debug.print("expected .variable, found {}\n", .{actual});
+            return error.TestExpectedVariableStatementByStatement;
+        },
     }
 }
 
@@ -269,10 +293,25 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
 fn expectStatement(expected: *const ast.Statement, actual: *const ast.Statement) !void {
     switch (expected.*) {
         .variable => |variable| try expectVariableStatementByStatement(&variable, actual),
+        .expressionStatement => |expressionStatement| try expectExpressionStatementByStatement(&expressionStatement, actual),
         // else => {
         //     std.debug.print("unsupported {}\n", .{expected});
         //     return error.TestExpectedStatement;
         // },
+    }
+}
+
+fn expectExpressionStatement(expected: *const ast.ExpressionStatement, actual: *const ast.ExpressionStatement) !void {
+    try expectExpression(expected.*.expression, actual.*.expression);
+}
+
+fn expectExpressionStatementByStatement(expected: *const ast.ExpressionStatement, actual: *const ast.Statement) !void {
+    switch (actual.*) {
+        .expressionStatement => |expressionStatement| try expectExpressionStatement(expected, &expressionStatement),
+        else => {
+            std.debug.print("expected .return_, found {}\n", .{actual});
+            return error.TestExpectedExpressionStatementByStatement;
+        },
     }
 }
 
@@ -286,6 +325,19 @@ test "variable statements" {
                         .name = ast.Identifier{ .value = "x" },
                         .value = &integer,
                     },
+                }, program);
+            }
+        }.function);
+    }
+}
+
+test "expression statements" {
+    {
+        try parseProgramForTesting("5;", struct {
+            fn function(program: *const ast.Program) !void {
+                var integer = ast.Expression{ .integer = ast.Integer{ .value = 5 } };
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{ .expression = &integer },
                 }, program);
             }
         }.function);
