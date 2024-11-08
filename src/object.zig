@@ -75,7 +75,7 @@ pub const Float = struct {
     value: f64,
 
     pub fn toString(self: Float, buf: *string.String) string.String.Error!void {
-        const floatString = try std.fmt.allocPrint(buf.allocator, "{}", .{self.value});
+        const floatString = try std.fmt.allocPrint(buf.allocator, "{d:.9}", .{self.value});
         try buf.concat(floatString);
     }
 };
