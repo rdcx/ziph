@@ -459,6 +459,16 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
             }
         },
 
+        .assignment => {
+            switch (actual.*) {
+                .assignment => |assignment| try expectAssignment(&expected.*.assignment, &assignment),
+                else => {
+                    std.debug.print("expected .assignment, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+
         .variable => {
             switch (actual.*) {
                 .variable => |variable| try expectVariable(&expected.*.variable, &variable),
@@ -496,9 +506,13 @@ fn expectBlock(expected: *const ast.Block, actual: *const ast.Block) anyerror!vo
     }
 }
 
+fn expectAssignment(expected: *const ast.Assignment, actual: *const ast.Assignment) anyerror!void {
+    try expectVariable(&expected.*.name, &actual.*.name);
+    try expectExpression(expected.*.value, actual.*.value);
+}
+
 fn expectStatement(expected: *const ast.Statement, actual: *const ast.Statement) !void {
     switch (expected.*) {
-        .assignment => |assignment| try expectAssignmentStatementByStatement(&assignment, actual),
         .expressionStatement => |expressionStatement| try expectExpressionStatementByStatement(&expressionStatement, actual),
         // else => {
         //     std.debug.print("unsupported {}\n", .{expected});
@@ -514,10 +528,6 @@ fn expectExpressionStatement(expected: *const ast.ExpressionStatement, actual: *
 fn expectExpressionStatementByStatement(expected: *const ast.ExpressionStatement, actual: *const ast.Statement) !void {
     switch (actual.*) {
         .expressionStatement => |expressionStatement| try expectExpressionStatement(expected, &expressionStatement),
-        else => {
-            std.debug.print("expected .return_, found {}\n", .{actual});
-            return error.TestExpectedExpressionStatementByStatement;
-        },
     }
 }
 
@@ -526,10 +536,17 @@ test "assignment statements" {
         try parseProgramForTesting("$x = 5;", struct {
             fn function(program: *const ast.Program) !void {
                 var integer = ast.Expression{ .integer = ast.Integer{ .value = 5 } };
-                try expectOneStatementInProgram(&ast.Statement{
+
+                var expression = ast.Expression{
                     .assignment = ast.Assignment{
                         .name = ast.Variable{ .value = "x" },
                         .value = &integer,
+                    },
+                };
+
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{
+                        .expression = &expression,
                     },
                 }, program);
             }
@@ -545,10 +562,17 @@ test "assignment statements" {
                 const infixExpression = ast.InfixExpression{ .left = &left, .operator = ast.Operator.asterisk, .right = &right };
 
                 var expression = ast.Expression{ .infixExpression = infixExpression };
-                try expectOneStatementInProgram(&ast.Statement{
+
+                var assignmentExpression = ast.Expression{
                     .assignment = ast.Assignment{
                         .name = ast.Variable{ .value = "y" },
                         .value = &expression,
+                    },
+                };
+
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{
+                        .expression = &assignmentExpression,
                     },
                 }, program);
             }
@@ -567,10 +591,16 @@ test "assignment statements" {
 
                 var expression = ast.Expression{ .assignment = assignment };
 
-                try expectOneStatementInProgram(&ast.Statement{
+                var assignmentExpression = ast.Expression{
                     .assignment = ast.Assignment{
                         .name = ast.Variable{ .value = "a" },
                         .value = &expression,
+                    },
+                };
+
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{
+                        .expression = &assignmentExpression,
                     },
                 }, program);
             }
