@@ -43,6 +43,7 @@ pub const Expression = union(enum) {
     infixExpression: InfixExpression,
     call: Call,
     function: Function,
+    if_: If,
 
     pub fn toString(self: *Expression, buf: *String) String.Error!void {
         switch (self.*) {
@@ -53,6 +54,7 @@ pub const Expression = union(enum) {
             .infixExpression => |infixExpression| try infixExpression.toString(buf),
             .float => |float| try float.toString(buf),
             .call => |call| try call.toString(buf),
+            .if_ => |if_| try if_.toString(buf),
         }
     }
 };
@@ -76,6 +78,7 @@ pub const InfixExpression = struct {
 pub const Statement = union(enum) {
     expressionStatement: ExpressionStatement,
     return_: Return,
+    if_: If,
 
     pub fn toString(self: *Statement, buf: *String) !void {
         return switch (self.*) {
@@ -90,6 +93,23 @@ pub const ExpressionStatement = struct {
 
     pub fn toString(self: ExpressionStatement, buf: *String) String.Error!void {
         try self.expression.toString(buf);
+    }
+};
+
+pub const If = struct {
+    condition: *Expression,
+    thenBranch: Block,
+    elseBranch: ?Block,
+
+    pub fn toString(self: *If, buf: *String) String.Error!void {
+        try buf.concat("if ");
+        try self.condition.toString(buf);
+        try buf.concat(" ");
+        try self.thenBranch.toString(buf);
+        if (self.elseBranch) |*elseBranch| {
+            try buf.concat(" else ");
+            try elseBranch.toString(buf);
+        }
     }
 };
 

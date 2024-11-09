@@ -266,11 +266,38 @@ pub const Parser = struct {
             .left_paren => try self.parseGroupedExpression(),
             .function => ast.Expression{ .function = try self.parseFunctionLiteral() },
             .ident => ast.Expression{ .identifier = try self.parseIdentifier() },
+            .if_ => ast.Expression{ .if_ = try self.parseIfExpression() },
             else => {
                 std.debug.print("unsupported {}\n", .{tok});
                 return ParserError.InvalidPrefix;
             },
         };
+    }
+
+    fn parseIfExpression(self: *Self) ParserError!ast.If {
+        try self.expectPeek(.left_paren);
+
+        self.nextToken();
+
+        const condition = try self.parseExpression(.lowest);
+        const conditionPtr = self.allocator.create(ast.Expression) catch return ParserError.MemoryAllocation;
+        conditionPtr.* = condition;
+
+        try self.expectPeek(.right_paren);
+        try self.expectPeek(.left_brace);
+
+        self.nextToken();
+
+        const thenBlock = try self.parseBlock();
+        var elseBlock: ?ast.Block = null;
+        if (self.peekTokenIs(.else_)) {
+            self.nextToken();
+            try self.expectPeek(.left_brace);
+
+            elseBlock = try self.parseBlock();
+        }
+
+        return ast.If{ .condition = conditionPtr, .thenBranch = thenBlock, .elseBranch = elseBlock };
     }
 
     fn parseIdentifier(self: Self) ParserError!ast.Identifier {
@@ -451,7 +478,7 @@ fn expectInfixExpression(expected: *const ast.InfixExpression, actual: *const as
     try expectExpression(expected.*.right, actual.*.right);
 }
 
-fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expression) !void {
+fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expression) anyerror!void {
     switch (expected.*) {
         .integer => {
             switch (actual.*) {
@@ -550,6 +577,16 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
             }
         },
 
+        .if_ => {
+            switch (actual.*) {
+                .if_ => |ifStatement| try expectIfStatement(&expected.*.if_, &ifStatement),
+                else => {
+                    std.debug.print("expected .if, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+
         // else => {
         //     std.debug.print("unsupported {}\n", .{expected});
         //     return error.TestExpectedExpression;
@@ -595,10 +632,28 @@ fn expectStatement(expected: *const ast.Statement, actual: *const ast.Statement)
     switch (expected.*) {
         .expressionStatement => |expressionStatement| try expectExpressionStatementByStatement(&expressionStatement, actual),
         .return_ => |returnStatement| try expectReturnStatementByReturnStatement(&returnStatement, actual),
-        // else => {
-        //     std.debug.print("unsupported {}\n", .{expected});
-        //     return error.TestExpectedStatement;
-        // },
+        else => {
+            std.debug.print("unsupported {}\n", .{expected});
+            return error.TestExpectedStatement;
+        },
+    }
+}
+
+fn expectIfStatement(expected: *const ast.If, actual: *const ast.If) anyerror!void {
+    try expectExpression(expected.*.condition, actual.*.condition);
+    try expectBlock(&expected.*.thenBranch, &actual.*.thenBranch);
+
+    if (expected.*.elseBranch == null) {
+        if (actual.*.elseBranch != null) {
+            std.debug.print("expected null, found {?}\n", .{actual.*.elseBranch});
+            return error.TestExpectedIfStatement;
+        }
+    } else {
+        if (actual.*.elseBranch == null) {
+            std.debug.print("expected {?}, found null\n", .{expected.*.elseBranch});
+            return error.TestExpectedIfStatement;
+        }
+        // try expectBlock(expected.*.elseBranch, actual.*.elseBranch);
     }
 }
 
@@ -627,6 +682,43 @@ fn expectExpressionStatementByStatement(expected: *const ast.ExpressionStatement
             std.debug.print("expected .expressionStatement, found {}\n", .{actual});
             return error.TestExpectedExpressionStatementByStatement;
         },
+    }
+}
+
+test "if else" {
+    {
+        try parseProgramForTesting("if ($x < 10) { return 10; }", struct {
+            fn function(program: *const ast.Program) !void {
+                var left = ast.Expression{ .variable = ast.Variable{ .value = "x" } };
+                var right = ast.Expression{ .integer = ast.Integer{ .value = 10 } };
+
+                const infixExpression = ast.InfixExpression{ .left = &left, .operator = ast.Operator.lt, .right = &right };
+
+                var condition = ast.Expression{ .infixExpression = infixExpression };
+
+                var intExpr = ast.Expression{ .integer = ast.Integer{ .value = 10 } };
+
+                const returnStatement = ast.Return{ .value = &intExpr };
+
+                var ifExpression = ast.If{
+                    .condition = &condition,
+                    .thenBranch = ast.Block{
+                        .statements = std.ArrayList(ast.Statement).init(std.testing.allocator),
+                    },
+                    .elseBranch = null,
+                };
+
+                defer ifExpression.thenBranch.statements.deinit();
+
+                ifExpression.thenBranch.statements.append(ast.Statement{ .return_ = returnStatement }) catch return error.TestIfElse;
+
+                var expr = ast.Expression{ .if_ = ifExpression };
+
+                try expectOneStatementInProgram(&ast.Statement{ .expressionStatement = ast.ExpressionStatement{
+                    .expression = &expr,
+                } }, program);
+            }
+        }.function);
     }
 }
 

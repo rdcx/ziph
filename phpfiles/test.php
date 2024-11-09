@@ -4,4 +4,4 @@ function add($a, $b) {
     return $a + $b;
 }
 
-add(1, 2);
+return add(1, 2);

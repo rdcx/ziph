@@ -1561,6 +1561,7 @@ test "PHP lexer" {
         \\ 3.001
         \\
         \\ function add($x, $y) {  }
+        \\ if (true) { }
     ;
 
     var lexer = new(input);
@@ -1700,6 +1701,14 @@ test "PHP lexer" {
     try expectVariable("x", lexer.nextToken());
     try expectEqual(token.Token.comma, lexer.nextToken());
     try expectVariable("y", lexer.nextToken());
+    try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.left_brace, lexer.nextToken());
+    try expectEqual(token.Token.right_brace, lexer.nextToken());
+
+    // If statement
+    try expectEqual(token.Token.if_, lexer.nextToken());
+    try expectEqual(token.Token.left_paren, lexer.nextToken());
+    try expectEqual(token.Token.true_literal, lexer.nextToken());
     try expectEqual(token.Token.right_paren, lexer.nextToken());
     try expectEqual(token.Token.left_brace, lexer.nextToken());
     try expectEqual(token.Token.right_brace, lexer.nextToken());
