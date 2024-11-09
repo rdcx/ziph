@@ -267,6 +267,8 @@ pub const Parser = struct {
             .function => ast.Expression{ .function = try self.parseFunctionLiteral() },
             .ident => ast.Expression{ .identifier = try self.parseIdentifier() },
             .if_ => ast.Expression{ .if_ = try self.parseIfExpression() },
+            .true_literal => ast.Expression{ .boolean = ast.Boolean{ .value = true } },
+            .false_literal => ast.Expression{ .boolean = ast.Boolean{ .value = false } },
             else => {
                 std.debug.print("unsupported {}\n", .{tok});
                 return ParserError.InvalidPrefix;
@@ -587,6 +589,16 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
             }
         },
 
+        .boolean => {
+            switch (actual.*) {
+                .boolean => |boolean| try expectEqual(expected.*.boolean.value, boolean.value),
+                else => {
+                    std.debug.print("expected .boolean, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+
         // else => {
         //     std.debug.print("unsupported {}\n", .{expected});
         //     return error.TestExpectedExpression;
@@ -828,6 +840,29 @@ test "expressions" {
                 var str = ast.Expression{ .string_dq_literal = ast.StringLiteral{ .value = "hello" } };
                 try expectOneStatementInProgram(&ast.Statement{
                     .expressionStatement = ast.ExpressionStatement{ .expression = &str },
+                }, program);
+            }
+        }.function);
+    }
+}
+
+test "comparisons" {
+    {
+        try parseProgramForTesting("true == true;", struct {
+            fn function(program: *const ast.Program) !void {
+                var left = ast.Expression{ .boolean = ast.Boolean{ .value = true } };
+                var right = ast.Expression{ .boolean = ast.Boolean{ .value = true } };
+
+                const infixExpression = ast.InfixExpression{
+                    .left = &left,
+                    .operator = ast.Operator.equal,
+                    .right = &right,
+                };
+
+                var expression = ast.Expression{ .infixExpression = infixExpression };
+
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{ .expression = &expression },
                 }, program);
             }
         }.function);

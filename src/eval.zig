@@ -284,9 +284,9 @@ pub const Evaluator = struct {
             .string => |leftString| {
                 switch (right.*) {
                     .string => |rightString| {
-                        if (operator.* == ast.Operator.equal) {
+                        if (operator.* == ast.Operator.equal or operator.* == ast.Operator.identical) {
                             return nativeBoolToBooleanObject(std.mem.eql(u8, leftString.value, rightString.value));
-                        } else if (operator.* == ast.Operator.notEqual) {
+                        } else if (operator.* == ast.Operator.notEqual or operator.* == ast.Operator.notIdentical) {
                             return nativeBoolToBooleanObject(!std.mem.eql(u8, leftString.value, rightString.value));
                         } else {
                             return util.newError(
@@ -306,8 +306,10 @@ pub const Evaluator = struct {
 
             else => {
                 switch (operator.*) {
-                    // .equal => return nativeBoolToBooleanObject(self.compareObject(left, right)),
-                    // .notEqual => return nativeBoolToBooleanObject(!self.compareObject(left, right)),
+                    .equal => return nativeBoolToBooleanObject(self.compareObject(left, right)),
+                    .notEqual => return nativeBoolToBooleanObject(!self.compareObject(left, right)),
+                    .identical => return nativeBoolToBooleanObject(left == right),
+                    .notIdentical => return nativeBoolToBooleanObject(left != right),
                     else => {
                         if (std.mem.eql(u8, @tagName(left.*), @tagName(right.*))) {
                             return try util.newError(
@@ -340,6 +342,8 @@ pub const Evaluator = struct {
             .gte => return nativeBoolToBooleanObject(left.*.value >= right.*.value),
             .equal => return nativeBoolToBooleanObject(left.*.value == right.*.value),
             .notEqual => return nativeBoolToBooleanObject(left.*.value != right.*.value),
+            .identical => return nativeBoolToBooleanObject(left.*.value == right.*.value),
+            .notIdentical => return nativeBoolToBooleanObject(left.*.value != right.*.value),
             else => return util.newError(
                 self.allocator,
                 "unknown operator: Integer {s} Integer",
@@ -360,6 +364,8 @@ pub const Evaluator = struct {
             .gte => return nativeBoolToBooleanObject(left.*.value >= right.*.value),
             .equal => return nativeBoolToBooleanObject(left.*.value == right.*.value),
             .notEqual => return nativeBoolToBooleanObject(left.*.value != right.*.value),
+            .identical => return nativeBoolToBooleanObject(left.*.value == right.*.value),
+            .notIdentical => return nativeBoolToBooleanObject(left.*.value != right.*.value),
             else => return util.newError(
                 self.allocator,
                 "unknown operator: Float {s} Float",
@@ -373,6 +379,38 @@ pub const Evaluator = struct {
             return &builtin.TRUE_OBJECT;
         } else {
             return &builtin.FALSE_OBJECT;
+        }
+    }
+
+    fn compareObject(_: Self, obj1: *object.Object, obj2: *object.Object) bool {
+        switch (obj1.*) {
+            .null_ => {
+                switch (obj2.*) {
+                    .null_ => return true,
+                    else => return false,
+                }
+            },
+            .integer => |integer1| {
+                switch (obj2.*) {
+                    .integer => |integer2| return integer1.value == integer2.value,
+                    else => return false,
+                }
+            },
+            .boolean => |boolean1| {
+                switch (obj2.*) {
+                    .boolean => |boolean2| return boolean1.value == boolean2.value,
+                    else => return false,
+                }
+            },
+            .string => |string1| {
+                switch (obj2.*) {
+                    .string => |string2| return std.mem.eql(u8, string1.value, string2.value),
+                    else => return false,
+                }
+            },
+            .function => return @intFromPtr(obj1) == @intFromPtr(obj2),
+            // .builtinFunction => return @intFromPtr(obj1) == @intFromPtr(obj2),
+            else => @panic("Unsupported comparison."),
         }
     }
 };

@@ -44,6 +44,7 @@ pub const Expression = union(enum) {
     call: Call,
     function: Function,
     if_: If,
+    boolean: Boolean,
 
     pub fn toString(self: *Expression, buf: *String) String.Error!void {
         switch (self.*) {
@@ -149,6 +150,18 @@ pub const StringLiteral = struct {
     }
 };
 
+pub const Boolean = struct {
+    value: bool,
+
+    pub fn toString(self: Boolean, buf: *String) String.Error!void {
+        if (self.value) {
+            try buf.concat("true");
+        } else {
+            try buf.concat("false");
+        }
+    }
+};
+
 pub const Integer = struct {
     value: i64,
 
@@ -239,6 +252,8 @@ pub const Operator = enum {
     slash,
     equal,
     notEqual,
+    identical,
+    notIdentical,
     lt,
     gt,
     lte,
@@ -254,6 +269,8 @@ pub const Operator = enum {
             .slash => "/",
             .equal => "==",
             .notEqual => "!=",
+            .identical => "===",
+            .notIdentical => "!==",
             .lt => "<",
             .gt => ">",
             .lte => "<=",
