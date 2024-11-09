@@ -632,10 +632,10 @@ fn expectStatement(expected: *const ast.Statement, actual: *const ast.Statement)
     switch (expected.*) {
         .expressionStatement => |expressionStatement| try expectExpressionStatementByStatement(&expressionStatement, actual),
         .return_ => |returnStatement| try expectReturnStatementByReturnStatement(&returnStatement, actual),
-        else => {
-            std.debug.print("unsupported {}\n", .{expected});
-            return error.TestExpectedStatement;
-        },
+        // else => {
+        //     std.debug.print("unsupported {}\n", .{expected});
+        //     return error.TestExpectedStatement;
+        // },
     }
 }
 

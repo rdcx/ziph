@@ -134,7 +134,32 @@ pub const Evaluator = struct {
                 }
                 return try self.applyFunction(function, args);
             },
+            .if_ => |*if_| return try self.evalIfExpression(if_, env),
             // else => @panic("Bug: unsupported"),
+        }
+    }
+
+    fn evalIfExpression(self: *Self, ifExpression: *ast.If, env: *Env) EvalError!*object.Object {
+        const condition = try self.evalExpression(ifExpression.*.condition, env);
+        switch (condition.*) {
+            .error_ => return condition,
+            else => {},
+        }
+
+        if (isTruthy(condition)) {
+            return try self.evalBlock(&ifExpression.*.thenBranch, env);
+        } else if (ifExpression.*.elseBranch) |*elseBranch| {
+            return try self.evalBlock(elseBranch, env);
+        } else {
+            return &builtin.NULL_OBJECT;
+        }
+    }
+
+    fn isTruthy(obj: *object.Object) bool {
+        switch (obj.*) {
+            .boolean => |boolean| return boolean.value,
+            .null_ => return false,
+            else => return true,
         }
     }
 

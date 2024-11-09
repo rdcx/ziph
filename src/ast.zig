@@ -78,7 +78,6 @@ pub const InfixExpression = struct {
 pub const Statement = union(enum) {
     expressionStatement: ExpressionStatement,
     return_: Return,
-    if_: If,
 
     pub fn toString(self: *Statement, buf: *String) !void {
         return switch (self.*) {

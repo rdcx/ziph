@@ -370,25 +370,28 @@ pub const Lexer = struct {
                 self.readChar();
                 return token.TokenTag.identical;
             }
+            self.readChar();
             return token.TokenTag.equal;
         }
         return null;
     }
 
     test "detectEqual returns equal token" {
-        const input = "==";
+        const input = "==;";
         var l = new(input);
 
         const tok = l.detectEqual().?;
         try std.testing.expect(tok == token.TokenTag.equal);
+        try std.testing.expect(l.nextToken() == token.TokenTag.semicolon);
     }
 
     test "detectEqual returns identical token" {
-        const input = "===";
+        const input = "===;";
         var l = new(input);
 
         const tok = l.detectEqual().?;
         try std.testing.expect(tok == token.TokenTag.identical);
+        try std.testing.expect(l.nextToken() == token.TokenTag.semicolon);
     }
 
     fn detectNotEqual(self: *Lexer) ?token.Token {
@@ -399,13 +402,14 @@ pub const Lexer = struct {
                 self.readChar();
                 return token.TokenTag.not_identical;
             }
+            self.readChar();
             return token.TokenTag.not_equal;
         }
         return null;
     }
 
     test "detectNotEqual returns not_equal token" {
-        const input = "!=";
+        const input = "!=;";
         var l = new(input);
 
         const tok = l.detectNotEqual().?;
@@ -418,7 +422,6 @@ pub const Lexer = struct {
 
         const tok = l.detectNotEqual().?;
         try std.testing.expect(tok == token.TokenTag.not_identical);
-
         try std.testing.expect(l.nextToken() == token.TokenTag.variable);
     }
 
@@ -1562,6 +1565,7 @@ test "PHP lexer" {
         \\
         \\ function add($x, $y) {  }
         \\ if (true) { }
+        \\ == != === !==
     ;
 
     var lexer = new(input);
@@ -1712,6 +1716,12 @@ test "PHP lexer" {
     try expectEqual(token.Token.right_paren, lexer.nextToken());
     try expectEqual(token.Token.left_brace, lexer.nextToken());
     try expectEqual(token.Token.right_brace, lexer.nextToken());
+
+    // Comparison operators
+    try expectEqual(token.Token.equal, lexer.nextToken());
+    try expectEqual(token.Token.not_equal, lexer.nextToken());
+    try expectEqual(token.Token.identical, lexer.nextToken());
+    try expectEqual(token.Token.not_identical, lexer.nextToken());
 
     // End of file
     try expectEqual(token.Token.eof, lexer.nextToken());
