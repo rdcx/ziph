@@ -281,6 +281,29 @@ pub const Evaluator = struct {
                 }
             },
 
+            .string => |leftString| {
+                switch (right.*) {
+                    .string => |rightString| {
+                        if (operator.* == ast.Operator.equal) {
+                            return nativeBoolToBooleanObject(std.mem.eql(u8, leftString.value, rightString.value));
+                        } else if (operator.* == ast.Operator.notEqual) {
+                            return nativeBoolToBooleanObject(!std.mem.eql(u8, leftString.value, rightString.value));
+                        } else {
+                            return util.newError(
+                                self.allocator,
+                                "unknown operator: String {s} String",
+                                .{operator.toString()},
+                            );
+                        }
+                    },
+                    else => return util.newError(
+                        self.allocator,
+                        "type mismatch: {s} {s} {s}",
+                        .{ left.typeName(), operator.toString(), right.typeName() },
+                    ),
+                }
+            },
+
             else => {
                 switch (operator.*) {
                     // .equal => return nativeBoolToBooleanObject(self.compareObject(left, right)),
