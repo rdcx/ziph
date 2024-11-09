@@ -46,3 +46,15 @@ pub fn newString(allocator: std.mem.Allocator, value: []const u8) !*object.Objec
     };
     return stringPtr;
 }
+
+pub fn newFunction(allocator: std.mem.Allocator, parameters: std.ArrayList(ast.Variable), body: *ast.Block, env: *Environment) !*object.Object {
+    const functionPtr = allocator.create(object.Object) catch return EvaluatorError.MemoryAllocation;
+    functionPtr.* = object.Object{
+        .function = object.Function{
+            .parameters = parameters,
+            .body = body,
+            .env = env,
+        },
+    };
+    return functionPtr;
+}

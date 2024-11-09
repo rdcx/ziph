@@ -71,16 +71,6 @@ pub const Evaluator = struct {
     fn evalStatement(self: *Self, statement: *ast.Statement, env: *Env) EvalError!*object.Object {
         switch (statement.*) {
             .expressionStatement => |expressionStatement| return self.evalExpression(expressionStatement.expression, env),
-            .assignment => |assignment| {
-                const value = try self.evalExpression(assignment.value, env);
-                switch (value.*) {
-                    .error_ => return value,
-                    else => {},
-                }
-
-                try env.*.insert(assignment.name.value, value);
-                return &builtin.NULL_OBJECT;
-            },
         }
     }
 
@@ -93,6 +83,7 @@ pub const Evaluator = struct {
             .float => |float| return try util.newFloat(self.*.allocator, float.value),
             .string_sq_literal => |stringLiteral| return try util.newString(self.allocator, stringLiteral.value),
             .string_dq_literal => |stringLiteral| return try util.newString(self.allocator, stringLiteral.value),
+            .function => |*function| return util.newFunction(self.allocator, function.parameters, &function.body, env),
             .infixExpression => |infixExpression| {
                 const left = try self.evalExpression(infixExpression.left, env);
                 switch (left.*) {

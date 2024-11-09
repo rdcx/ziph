@@ -1,5 +1,7 @@
 const std = @import("std");
 const string = @import("string.zig");
+const ast = @import("ast.zig");
+const Env = @import("env.zig").Environment;
 
 pub const Object = union(enum) {
     null_: Null,
@@ -8,6 +10,7 @@ pub const Object = union(enum) {
     boolean: Boolean,
     float: Float,
     string: String,
+    function: Function,
 
     pub fn toString(self: *Object, buf: *string.String) string.String.Error!void {
         switch (self.*) {
@@ -17,6 +20,7 @@ pub const Object = union(enum) {
             .float => |float| try float.toString(buf),
             .boolean => |boolean| try boolean.toString(buf),
             .string => |str| try str.toString(buf),
+            .function => |*function| try function.toString(buf),
         }
     }
 
@@ -28,6 +32,7 @@ pub const Object = union(enum) {
             .error_ => "Error",
             .boolean => "Boolean",
             .string => "String",
+            .function => "Function",
         };
     }
 };
@@ -88,5 +93,25 @@ pub const Float = struct {
     pub fn toString(self: Float, buf: *string.String) string.String.Error!void {
         const floatString = try std.fmt.allocPrint(buf.allocator, "{d:.9}", .{self.value});
         try buf.concat(floatString);
+    }
+};
+
+pub const Function = struct {
+    parameters: std.ArrayList(ast.Variable),
+    body: *ast.Block,
+    env: *Env,
+
+    pub fn toString(self: *Function, buf: *string.String) string.String.Error!void {
+        try buf.concat("function");
+        try buf.concat("(");
+        var i: usize = 0;
+        while (i < self.parameters.items.len) : (i += 1) {
+            try buf.concat("$");
+            try buf.concat(self.parameters.items[i].value);
+            if (i != self.parameters.items.len - 1) {
+                try buf.concat(", ");
+            }
+        }
+        try buf.concat(") ");
     }
 };

@@ -41,6 +41,7 @@ pub const Expression = union(enum) {
     string_sq_literal: StringLiteral,
     string_dq_literal: StringLiteral,
     infixExpression: InfixExpression,
+    call: Call,
     function: Function,
 
     pub fn toString(self: *Expression, buf: *String) String.Error!void {
@@ -51,6 +52,7 @@ pub const Expression = union(enum) {
             .identifier => |*identifier| try identifier.toString(buf),
             .infixExpression => |infixExpression| try infixExpression.toString(buf),
             .float => |float| try float.toString(buf),
+            .call => |call| try call.toString(buf),
         }
     }
 };
@@ -162,6 +164,25 @@ pub const Function = struct {
         }
         try buf.concat(") ");
         try self.body.toString(buf);
+    }
+};
+
+pub const Call = struct {
+    callee: *Expression,
+    arguments: std.ArrayList(Expression),
+
+    pub fn toString(self: *Call, buf: *String) String.Error!void {
+        try self.callee.toString(buf);
+        try buf.concat("(");
+        const len = self.arguments.items.len;
+        var i: usize = 0;
+        while (i < len) : (i += 1) {
+            try self.arguments.items[i].toString(buf);
+            if (i != len - 1) {
+                try buf.concat(", ");
+            }
+        }
+        try buf.concat(")");
     }
 };
 

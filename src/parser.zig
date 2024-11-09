@@ -23,6 +23,8 @@ pub const ParserError = error{
     InvalidIntegerLiteral,
     ExpectArgument,
     ExpectOperator,
+    InvalidExpressionList,
+    ExpectIdentifier,
 };
 
 const Priority = enum(u4) {
@@ -217,6 +219,7 @@ pub const Parser = struct {
         self.nextToken();
         return switch (tok) {
             .plus, .minus, .asterisk, .slash, .gt, .lt, .gte, .lte, .equal, .not_equal => ast.Expression{ .infixExpression = try self.parseInfixExpression(left) },
+            .left_paren => ast.Expression{ .call = try self.parseCallExpression(left) },
             else => ParserError.InvalidInfix,
         };
     }
@@ -248,10 +251,18 @@ pub const Parser = struct {
             .float_literal => ast.Expression{ .float = try self.parseFloat() },
             .left_paren => try self.parseGroupedExpression(),
             .function => ast.Expression{ .function = try self.parseFunctionLiteral() },
+            .ident => ast.Expression{ .identifier = try self.parseIdentifier() },
             else => {
                 std.debug.print("unsupported {}\n", .{tok});
                 return ParserError.InvalidPrefix;
             },
+        };
+    }
+
+    fn parseIdentifier(self: Self) ParserError!ast.Identifier {
+        return switch (self.curToken) {
+            .ident => |value| ast.Identifier{ .value = value },
+            else => ParserError.ExpectIdentifier,
         };
     }
 
@@ -281,11 +292,37 @@ pub const Parser = struct {
         try self.expectPeek(.left_brace);
         self.nextToken();
 
+        const body = try self.parseBlock();
+
         return ast.Function{
             .name = name,
             .parameters = parameters,
-            .body = try self.parseBlock(),
+            .body = body,
         };
+    }
+
+    fn parseCallExpression(self: *Self, callee: *ast.Expression) ParserError!ast.Call {
+        return ast.Call{ .callee = callee, .arguments = try self.parseExpressionList(.right_paren) };
+    }
+
+    fn parseExpressionList(self: *Self, endToken: token.TokenTag) ParserError!std.ArrayList(ast.Expression) {
+        var list = std.ArrayList(ast.Expression).init(self.allocator);
+        if (self.peekTokenIs(endToken)) {
+            self.nextToken();
+            return list;
+        }
+
+        self.nextToken();
+        list.append(try self.parseExpression(.lowest)) catch return ParserError.InvalidExpressionList;
+
+        while (self.peekTokenIs(.comma)) {
+            self.nextToken();
+            self.nextToken();
+            list.append(try self.parseExpression(.lowest)) catch return ParserError.InvalidExpressionList;
+        }
+        try self.expectPeek(endToken);
+
+        return list;
     }
 
     fn parseString(self: Self) ParserError!ast.StringLiteral {
@@ -479,10 +516,39 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
             }
         },
 
-        else => {
-            std.debug.print("unsupported {}\n", .{expected});
-            return error.TestExpectedExpression;
+        .call => {
+            switch (actual.*) {
+                .call => |call| try expectCall(&expected.*.call, &call),
+                else => {
+                    std.debug.print("expected .call, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
         },
+
+        .identifier => {
+            switch (actual.*) {
+                .identifier => |identifier| try expectIdentifier(&expected.*.identifier, &identifier),
+                else => {
+                    std.debug.print("expected .identifier, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+
+        // else => {
+        //     std.debug.print("unsupported {}\n", .{expected});
+        //     return error.TestExpectedExpression;
+        // },
+    }
+}
+
+fn expectCall(expected: *const ast.Call, actual: *const ast.Call) anyerror!void {
+    try expectExpression(expected.*.callee, actual.*.callee);
+
+    try expectEqual(@as(usize, expected.*.arguments.items.len), actual.*.arguments.items.len);
+    for (0..expected.arguments.items.len) |i| {
+        try expectExpression(&expected.*.arguments.items[i], &actual.*.arguments.items[i]);
     }
 }
 
@@ -608,7 +674,7 @@ test "assignment statement/expressions" {
     }
 }
 
-test "expression statements" {
+test "expressions" {
     {
         try parseProgramForTesting("5;", struct {
             fn function(program: *const ast.Program) !void {
@@ -637,6 +703,34 @@ test "expression statements" {
                 var str = ast.Expression{ .string_dq_literal = ast.StringLiteral{ .value = "hello" } };
                 try expectOneStatementInProgram(&ast.Statement{
                     .expressionStatement = ast.ExpressionStatement{ .expression = &str },
+                }, program);
+            }
+        }.function);
+    }
+}
+
+test "call infix expressions" {
+    {
+        try parseProgramForTesting("add(10, 10)", struct {
+            fn function(program: *const ast.Program) !void {
+                var left = ast.Expression{ .identifier = ast.Identifier{ .value = "add" } };
+
+                const leftArg = ast.Expression{ .integer = ast.Integer{ .value = 10 } };
+                const rightArg = ast.Expression{ .integer = ast.Integer{ .value = 10 } };
+
+                var call = ast.Call{
+                    .callee = &left,
+                    .arguments = std.ArrayList(ast.Expression).init(std.testing.allocator),
+                };
+                defer call.arguments.deinit();
+
+                call.arguments.append(leftArg) catch return error.TestCallInfixExpression;
+                call.arguments.append(rightArg) catch return error.TestCallInfixExpression;
+
+                var expression = ast.Expression{ .call = call };
+
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{ .expression = &expression },
                 }, program);
             }
         }.function);
