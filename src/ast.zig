@@ -41,6 +41,7 @@ pub const Expression = union(enum) {
     string_sq_literal: StringLiteral,
     string_dq_literal: StringLiteral,
     infixExpression: InfixExpression,
+    function: Function,
 
     pub fn toString(self: *Expression, buf: *String) String.Error!void {
         switch (self.*) {
@@ -78,6 +79,7 @@ pub const Statement = union(enum) {
         return switch (self.*) {
             .expressionStatement => |expressionStatement| try expressionStatement.toString(buf),
             .variable => |*variable| try variable.toString(buf),
+            .function => |*function| try function.toString(buf),
         };
     }
 };
@@ -142,6 +144,41 @@ pub const Float = struct {
     pub fn toString(self: Float, buf: *String) String.Error!void {
         const floatString = try std.fmt.allocPrint(buf.allocator, "{}", .{self.value});
         try buf.concat(floatString);
+    }
+};
+
+pub const Function = struct {
+    name: Identifier,
+    parameters: std.ArrayList(Variable),
+    body: Block,
+
+    pub fn toString(self: *Function, buf: *String) !void {
+        try buf.concat("fn ");
+        try buf.concat(self.name);
+        try buf.concat("(");
+        var i: usize = 0;
+        while (i < self.parameters.items.len) : (i += 1) {
+            try self.parameters.items[i].toString(buf);
+            if (i + 1 < self.parameters.items.len) {
+                try buf.concat(", ");
+            }
+        }
+        try buf.concat(") ");
+        try self.body.toString(buf);
+    }
+};
+
+pub const Block = struct {
+    statements: std.ArrayList(Statement),
+
+    pub fn toString(self: *Block, buf: *String) !void {
+        try buf.concat("{\n");
+        var i: usize = 0;
+        while (i < self.statements.items.len) : (i += 1) {
+            try self.statements.items[i].toString(buf);
+            try buf.concat("\n");
+        }
+        try buf.concat("}");
     }
 };
 

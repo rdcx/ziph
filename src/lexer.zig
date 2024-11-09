@@ -1559,6 +1559,8 @@ test "PHP lexer" {
         \\ ? :
         \\ + - * / > < >= <= 
         \\ 3.001
+        \\
+        \\ function add($x, $y) {  }
     ;
 
     var lexer = new(input);
@@ -1690,6 +1692,17 @@ test "PHP lexer" {
 
     // Float
     try expectFloat("3.001", lexer.nextToken());
+
+    // Function declaration
+    try expectEqual(token.Token.function, lexer.nextToken());
+    try expectIdent("add", lexer.nextToken());
+    try expectEqual(token.Token.left_paren, lexer.nextToken());
+    try expectVariable("x", lexer.nextToken());
+    try expectEqual(token.Token.comma, lexer.nextToken());
+    try expectVariable("y", lexer.nextToken());
+    try expectEqual(token.Token.right_paren, lexer.nextToken());
+    try expectEqual(token.Token.left_brace, lexer.nextToken());
+    try expectEqual(token.Token.right_brace, lexer.nextToken());
 
     // End of file
     try expectEqual(token.Token.eof, lexer.nextToken());

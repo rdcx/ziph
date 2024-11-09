@@ -21,6 +21,7 @@ pub const ParserError = error{
     InvalidInteger,
     InvalidFloat,
     InvalidIntegerLiteral,
+    ExpectArgument,
     ExpectOperator,
 };
 
@@ -160,6 +161,18 @@ pub const Parser = struct {
         return ast.ExpressionStatement{ .expression = expressionPtr };
     }
 
+    fn parseBlock(self: *Self) ParserError!ast.Block {
+        var statements = std.ArrayList(ast.Statement).init(self.allocator);
+
+        while (!self.currentTokenIs(.right_brace)) {
+            const statement = try self.parseStatement();
+            statements.append(statement) catch return ParserError.MemoryAllocation;
+            self.nextToken();
+        }
+
+        return ast.Block{ .statements = statements };
+    }
+
     fn parseAssignmentStatement(self: *Self) ParserError!ast.Assignment {
         const name =
             switch (self.curToken) {
@@ -234,10 +247,44 @@ pub const Parser = struct {
             .integer_literal => ast.Expression{ .integer = try self.parseInteger() },
             .float_literal => ast.Expression{ .float = try self.parseFloat() },
             .left_paren => try self.parseGroupedExpression(),
+            .function => ast.Expression{ .function = try self.parseFunctionLiteral() },
             else => {
                 std.debug.print("unsupported {}\n", .{tok});
                 return ParserError.InvalidPrefix;
             },
+        };
+    }
+
+    fn parseFunctionLiteral(self: *Self) ParserError!ast.Function {
+        try self.expectPeek(.ident);
+        const name = ast.Identifier{ .value = self.curToken.ident };
+
+        try self.expectPeek(.left_paren);
+        self.nextToken();
+
+        var parameters = std.ArrayList(ast.Variable).init(self.allocator);
+        while (!self.currentTokenIs(.right_paren)) {
+            // TODO: allow type annotations
+            // TODO: allow default values
+
+            if (!self.currentTokenIs(.variable)) {
+                return ParserError.ExpectArgument;
+            }
+            parameters.append(ast.Variable{ .value = try self.parseVariable() }) catch return ParserError.MemoryAllocation;
+            self.nextToken();
+
+            if (self.currentTokenIs(.comma)) {
+                self.nextToken();
+            }
+        }
+
+        try self.expectPeek(.left_brace);
+        self.nextToken();
+
+        return ast.Function{
+            .name = name,
+            .parameters = parameters,
+            .body = try self.parseBlock(),
         };
     }
 
@@ -402,10 +449,50 @@ fn expectExpression(expected: *const ast.Expression, actual: *const ast.Expressi
             }
         },
 
+        .function => {
+            switch (actual.*) {
+                .function => |function| try expectFunction(&expected.*.function, &function),
+                else => {
+                    std.debug.print("expected .function, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+
+        .variable => {
+            switch (actual.*) {
+                .variable => |variable| try expectVariable(&expected.*.variable, &variable),
+                else => {
+                    std.debug.print("expected .variable, found {}\n", .{actual});
+                    return error.TestExpectedExpression;
+                },
+            }
+        },
+
         else => {
             std.debug.print("unsupported {}\n", .{expected});
             return error.TestExpectedExpression;
         },
+    }
+}
+
+fn expectFunction(expected: *const ast.Function, actual: *const ast.Function) !void {
+    try expectIdentifier(&expected.*.name, &actual.*.name);
+
+    try expectEqual(@as(usize, expected.*.parameters.items.len), actual.*.parameters.items.len);
+    for (0..expected.parameters.items.len) |i| {
+        try expectVariable(&expected.*.parameters.items[i], &actual.*.parameters.items[i]);
+    }
+
+    try expectBlock(&expected.*.body, &actual.*.body);
+}
+
+fn expectBlock(expected: *const ast.Block, actual: *const ast.Block) anyerror!void {
+    try expectEqual(@as(usize, expected.*.statements.items.len), actual.*.statements.items.len);
+    for (0..expected.statements.items.len) |i| {
+        const expectedStatement = &expected.*.statements.items[i];
+        const actualStatement = &actual.*.statements.items[i];
+        try expectStatement(expectedStatement, actualStatement);
     }
 }
 
@@ -520,6 +607,62 @@ test "expression statements" {
                 var str = ast.Expression{ .string_dq_literal = ast.StringLiteral{ .value = "hello" } };
                 try expectOneStatementInProgram(&ast.Statement{
                     .expressionStatement = ast.ExpressionStatement{ .expression = &str },
+                }, program);
+            }
+        }.function);
+    }
+}
+
+test "function literals" {
+    {
+        try parseProgramForTesting("function add($x, $y) { $x + $y }", struct {
+            fn function(program: *const ast.Program) !void {
+                const x = ast.Variable{ .value = "x" };
+                const y = ast.Variable{ .value = "y" };
+
+                var parameters = std.ArrayList(ast.Variable).init(std.testing.allocator);
+                defer parameters.deinit();
+
+                parameters.append(x) catch return error.TestFunctionStatement;
+
+                parameters.append(y) catch return error.TestFunctionStatement;
+
+                var leftExpr = ast.Expression{
+                    .variable = ast.Variable{ .value = "x" },
+                };
+                var rightExpr = ast.Expression{
+                    .variable = ast.Variable{ .value = "y" },
+                };
+                var blockExpr = ast.Expression{
+                    .infixExpression = ast.InfixExpression{
+                        .left = &leftExpr,
+                        .operator = ast.Operator.plus,
+                        .right = &rightExpr,
+                    },
+                };
+
+                var body = std.ArrayList(ast.Statement).init(std.testing.allocator);
+                defer body.deinit();
+                body.append(ast.Statement{
+                    .expressionStatement = ast.ExpressionStatement{ .expression = &blockExpr },
+                }) catch return error.TestFunctionStatement;
+
+                const block = ast.Block{ .statements = body };
+
+                var funExpr = ast.Expression{
+                    .function = ast.Function{
+                        .name = ast.Identifier{ .value = "add" },
+                        .parameters = parameters,
+                        .body = block,
+                    },
+                };
+
+                const expressionStatement = ast.ExpressionStatement{
+                    .expression = &funExpr,
+                };
+
+                try expectOneStatementInProgram(&ast.Statement{
+                    .expressionStatement = expressionStatement,
                 }, program);
             }
         }.function);

@@ -1,5 +1,5 @@
 <?php
 
-$x = 10;
+$add = fn($a, $b) => $a + $b; 
 
-echo $x;
+echo $add(1, 2);
