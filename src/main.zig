@@ -3,10 +3,13 @@ const repl = @import("repl.zig");
 const flag = @import("flag.zig");
 const lexer = @import("lexer.zig");
 const token = @import("token.zig");
+const Parser = @import("parser.zig").Parser;
+const Evaluator = @import("eval.zig").Evaluator;
+const Env = @import("env.zig").Environment;
+const String = @import("string.zig").String;
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("Welcome to Ziph. The PHP Compiler written in Zig!\n", .{});
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
@@ -15,29 +18,39 @@ pub fn main() !void {
     const file = flags.getFlag("--file");
 
     if (file) |f| {
-        try stdout.print("File: {s}\n", .{f});
+        var env = Env.new(alloc);
+        var evaluator = Evaluator.new(alloc);
 
         const file_content = try std.fs.cwd().readFileAlloc(gpa.allocator(), f, std.math.maxInt(usize));
-        std.debug.print("{s}\n", .{file_content});
 
         var l = lexer.new(file_content);
 
-        while (true) {
-            const tok = l.nextToken();
-            if (tok == token.TokenTag.eof) {
-                break;
-            }
+        var parser = Parser.new(&l, alloc);
 
-            try stdout.print("{}\n", .{tok});
+        var program = parser.parseProgram() catch |err| {
+            try stdout.print("Error parsing program: {}\n", .{err});
+            return;
+        };
 
-            if (tok == token.TokenTag.illegal) {
-                std.debug.print("Illegal token found at position {d}:{d}\n", .{ l.line_n, l.col_n });
-                break;
-            }
+        const object = evaluator.evalProgram(&program, &env) catch |err| {
+            try stdout.print("Error evaluating program: {}\n", .{err});
+            return;
+        };
+
+        switch (object.*) {
+            .error_ => try stdout.print("Error: {s}\n", .{object.error_.message}),
+
+            else => {
+                var objPrintBuf = String.init(alloc);
+                try object.toString(&objPrintBuf);
+                try stdout.print("{s}\n", .{objPrintBuf.str()});
+            },
         }
 
         return;
     }
+
+    try stdout.print("Welcome to Ziph. The PHP Compiler written in Zig!\n", .{});
 
     try repl.start();
 }
