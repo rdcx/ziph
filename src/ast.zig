@@ -75,10 +75,12 @@ pub const InfixExpression = struct {
 
 pub const Statement = union(enum) {
     expressionStatement: ExpressionStatement,
+    return_: Return,
 
     pub fn toString(self: *Statement, buf: *String) !void {
         return switch (self.*) {
             .expressionStatement => |expressionStatement| try expressionStatement.toString(buf),
+            .return_ => |return_| try return_.toString(buf),
         };
     }
 };
@@ -197,6 +199,15 @@ pub const Block = struct {
             try buf.concat("\n");
         }
         try buf.concat("}");
+    }
+};
+
+pub const Return = struct {
+    value: *Expression,
+
+    pub fn toString(self: Return, buf: *String) String.Error!void {
+        try buf.concat("return ");
+        try self.value.toString(buf);
     }
 };
 

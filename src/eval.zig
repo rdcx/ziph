@@ -71,6 +71,21 @@ pub const Evaluator = struct {
     fn evalStatement(self: *Self, statement: *ast.Statement, env: *Env) EvalError!*object.Object {
         switch (statement.*) {
             .expressionStatement => |expressionStatement| return self.evalExpression(expressionStatement.expression, env),
+            .return_ => |return_| {
+                const value = try self.evalExpression(return_.value, env);
+                switch (value.*) {
+                    .error_ => return value,
+                    else => {},
+                }
+
+                const objectPtr = self.allocator.create(object.Object) catch return EvalError.MemoryAllocation;
+                objectPtr.* = object.Object{
+                    .return_ = object.Return{
+                        .value = value,
+                    },
+                };
+                return objectPtr;
+            },
         }
     }
 
@@ -83,7 +98,7 @@ pub const Evaluator = struct {
             .float => |float| return try util.newFloat(self.*.allocator, float.value),
             .string_sq_literal => |stringLiteral| return try util.newString(self.allocator, stringLiteral.value),
             .string_dq_literal => |stringLiteral| return try util.newString(self.allocator, stringLiteral.value),
-            .function => |*function| return util.newFunction(self.allocator, function.parameters, &function.body, env),
+            .function => |*function| return try self.evalFunction(function, env),
             .infixExpression => |infixExpression| {
                 const left = try self.evalExpression(infixExpression.left, env);
                 switch (left.*) {
@@ -99,8 +114,89 @@ pub const Evaluator = struct {
 
                 return try self.evalInfixExpression(&infixExpression.operator, left, right);
             },
+            .call => |*call| {
+                const function = try self.evalExpression(call.callee, env);
+                switch (function.*) {
+                    .error_ => return function,
+                    else => {},
+                }
+
+                var args = std.ArrayList(*object.Object).init(self.allocator);
+                var i: usize = 0;
+                while (i < call.arguments.items.len) : (i += 1) {
+                    const evaled = try self.evalExpression(&call.arguments.items[i], env);
+                    switch (evaled.*) {
+                        .error_ => return evaled,
+                        else => {},
+                    }
+
+                    args.append(evaled) catch return EvalError.MemoryAllocation;
+                }
+                return try self.applyFunction(function, args);
+            },
             // else => @panic("Bug: unsupported"),
         }
+    }
+
+    fn evalFunction(self: *Self, function: *ast.Function, env: *Env) EvalError!*object.Object {
+        const fun = try util.newFunction(self.allocator, function.parameters, &function.body, env);
+        // add function to env
+        try env.*.insert(function.name.value, fun);
+
+        return fun;
+    }
+
+    fn applyFunction(self: *Self, function: *object.Object, arguments: std.ArrayList(*object.Object)) !*object.Object {
+        switch (function.*) {
+            .function => |*func| {
+                if (func.parameters.items.len != arguments.items.len) {
+                    return util.newError(
+                        self.allocator,
+                        "wrong number of arguments: want={}, got={}",
+                        .{ func.parameters.items.len, arguments.items.len },
+                    );
+                }
+
+                const extendedEnv = try self.extendFunctionEnv(func, arguments);
+                const evaluated = try self.evalBlock(func.body, extendedEnv);
+                return unwrapReturnValue(evaluated);
+            },
+            // .builtinFunction => |builtinFunction| return try builtinFunction.call(self.allocator, arguments),
+            else => return util.newError(self.allocator, "not a function: {s}", .{function.typeName()}),
+        }
+    }
+
+    fn extendFunctionEnv(self: Self, function: *object.Function, arguments: std.ArrayList(*object.Object)) EvalError!*Env {
+        const envPtr = self.allocator.create(Env) catch return EvalError.MemoryAllocation;
+        envPtr.* = Env.newEnclose(self.allocator, function.*.env);
+        var i: usize = 0;
+        while (i < function.parameters.items.len) : (i += 1) {
+            try envPtr.*.insert(function.parameters.items[i].value, arguments.items[i]);
+        }
+
+        return envPtr;
+    }
+
+    fn unwrapReturnValue(obj: *object.Object) *object.Object {
+        switch (obj.*) {
+            .return_ => |returnValue| return returnValue.value,
+            else => return obj,
+        }
+    }
+
+    fn evalBlock(self: *Self, block: *ast.Block, env: *Env) EvalError!*object.Object {
+        var result: *object.Object = &builtin.NULL_OBJECT;
+        var i: usize = 0;
+        while (i < block.statements.items.len) : (i += 1) {
+            const evaled = try self.evalStatement(&block.statements.items[i], env);
+            switch (evaled.*) {
+                .return_ => return evaled,
+                .error_ => return evaled,
+                else => result = evaled,
+            }
+        }
+
+        return result;
     }
 
     fn evalAssignment(self: *Self, assignment: *const ast.Assignment, env: *Env) EvalError!*object.Object {

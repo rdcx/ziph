@@ -11,6 +11,7 @@ pub const Object = union(enum) {
     float: Float,
     string: String,
     function: Function,
+    return_: Return,
 
     pub fn toString(self: *Object, buf: *string.String) string.String.Error!void {
         switch (self.*) {
@@ -21,6 +22,7 @@ pub const Object = union(enum) {
             .boolean => |boolean| try boolean.toString(buf),
             .string => |str| try str.toString(buf),
             .function => |*function| try function.toString(buf),
+            .return_ => |ret| try ret.value.toString(buf),
         }
     }
 
@@ -33,6 +35,7 @@ pub const Object = union(enum) {
             .boolean => "Boolean",
             .string => "String",
             .function => "Function",
+            .return_ => "Return",
         };
     }
 };
@@ -114,4 +117,8 @@ pub const Function = struct {
         }
         try buf.concat(") ");
     }
+};
+
+pub const Return = struct {
+    value: *Object,
 };

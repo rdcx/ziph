@@ -142,6 +142,7 @@ pub const Parser = struct {
                 self.nextToken();
                 return try self.parseStatement();
             },
+            .return_ => ast.Statement{ .return_ = try self.parseReturnStatement() },
             // .variable => {
             //     if (self.peekTokenIs(.assign)) {
             //         return ast.Statement{ .assignment = try self.parseAssignmentStatement() };
@@ -161,6 +162,19 @@ pub const Parser = struct {
         const expressionPtr = self.allocator.create(ast.Expression) catch return ParserError.MemoryAllocation;
         expressionPtr.* = expression;
         return ast.ExpressionStatement{ .expression = expressionPtr };
+    }
+
+    fn parseReturnStatement(self: *Self) ParserError!ast.Return {
+        self.nextToken();
+
+        const returnValue = try self.parseExpression(.lowest);
+        if (self.peekTokenIs(.semicolon)) {
+            self.nextToken();
+        }
+
+        const returnValuePtr = self.allocator.create(ast.Expression) catch return ParserError.MemoryAllocation;
+        returnValuePtr.* = returnValue;
+        return ast.Return{ .value = returnValuePtr };
     }
 
     fn parseBlock(self: *Self) ParserError!ast.Block {
@@ -580,10 +594,25 @@ fn expectAssignment(expected: *const ast.Assignment, actual: *const ast.Assignme
 fn expectStatement(expected: *const ast.Statement, actual: *const ast.Statement) !void {
     switch (expected.*) {
         .expressionStatement => |expressionStatement| try expectExpressionStatementByStatement(&expressionStatement, actual),
+        .return_ => |returnStatement| try expectReturnStatementByReturnStatement(&returnStatement, actual),
         // else => {
         //     std.debug.print("unsupported {}\n", .{expected});
         //     return error.TestExpectedStatement;
         // },
+    }
+}
+
+fn expectReturnStatement(expected: *const ast.Return, actual: *const ast.Return) !void {
+    try expectExpression(expected.*.value, actual.*.value);
+}
+
+fn expectReturnStatementByReturnStatement(expected: *const ast.Return, actual: *const ast.Statement) !void {
+    switch (actual.*) {
+        .return_ => |returnStatement| try expectReturnStatement(expected, &returnStatement),
+        else => {
+            std.debug.print("expected .return, found {}\n", .{actual});
+            return error.TestExpectedReturnStatementByReturnStatement;
+        },
     }
 }
 
@@ -594,6 +623,10 @@ fn expectExpressionStatement(expected: *const ast.ExpressionStatement, actual: *
 fn expectExpressionStatementByStatement(expected: *const ast.ExpressionStatement, actual: *const ast.Statement) !void {
     switch (actual.*) {
         .expressionStatement => |expressionStatement| try expectExpressionStatement(expected, &expressionStatement),
+        else => {
+            std.debug.print("expected .expressionStatement, found {}\n", .{actual});
+            return error.TestExpectedExpressionStatementByStatement;
+        },
     }
 }
 
@@ -703,6 +736,32 @@ test "expressions" {
                 var str = ast.Expression{ .string_dq_literal = ast.StringLiteral{ .value = "hello" } };
                 try expectOneStatementInProgram(&ast.Statement{
                     .expressionStatement = ast.ExpressionStatement{ .expression = &str },
+                }, program);
+            }
+        }.function);
+    }
+}
+
+test "return" {
+    {
+        try parseProgramForTesting("return 5;", struct {
+            fn function(program: *const ast.Program) !void {
+                var integer = ast.Expression{ .integer = ast.Integer{ .value = 5 } };
+                const returnStatement = ast.Return{ .value = &integer };
+                try expectOneStatementInProgram(&ast.Statement{
+                    .return_ = returnStatement,
+                }, program);
+            }
+        }.function);
+    }
+
+    {
+        try parseProgramForTesting("return 10;", struct {
+            fn function(program: *const ast.Program) !void {
+                var integer = ast.Expression{ .integer = ast.Integer{ .value = 10 } };
+                const returnStatement = ast.Return{ .value = &integer };
+                try expectOneStatementInProgram(&ast.Statement{
+                    .return_ = returnStatement,
                 }, program);
             }
         }.function);
