@@ -531,7 +531,7 @@ fn expectExpressionStatementByStatement(expected: *const ast.ExpressionStatement
     }
 }
 
-test "assignment statements" {
+test "assignment statement/expressions" {
     {
         try parseProgramForTesting("$x = 5;", struct {
             fn function(program: *const ast.Program) !void {
