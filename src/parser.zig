@@ -44,7 +44,9 @@ const Priority = enum(u4) {
     fn fromToken(tok: token.TokenTag) Priority {
         return switch (tok) {
             .equal => .equals,
+            .identical => .equals,
             .not_equal => .equals,
+            .not_identical => .equals,
             .lt => .lessgreater,
             .gt => .lessgreater,
             .lte => .lessgreater,
@@ -74,6 +76,8 @@ fn getOperatorFromToken(tok: token.TokenTag) !ast.Operator {
         .bang => .bang,
         .equal => .equal,
         .not_equal => .notEqual,
+        .identical => .identical,
+        .not_identical => .notIdentical,
         else => ParserError.ExpectOperator,
     };
 }
@@ -232,7 +236,7 @@ pub const Parser = struct {
     fn parseInfixExpressionByToken(self: *Self, tok: token.TokenTag, left: *ast.Expression) ParserError!ast.Expression {
         self.nextToken();
         return switch (tok) {
-            .plus, .minus, .asterisk, .slash, .gt, .lt, .gte, .lte, .equal, .not_equal => ast.Expression{ .infixExpression = try self.parseInfixExpression(left) },
+            .plus, .minus, .asterisk, .slash, .gt, .lt, .gte, .lte, .equal, .not_equal, .identical, .not_identical => ast.Expression{ .infixExpression = try self.parseInfixExpression(left) },
             .left_paren => ast.Expression{ .call = try self.parseCallExpression(left) },
             else => ParserError.InvalidInfix,
         };
@@ -292,9 +296,12 @@ pub const Parser = struct {
 
         const thenBlock = try self.parseBlock();
         var elseBlock: ?ast.Block = null;
+
         if (self.peekTokenIs(.else_)) {
             self.nextToken();
             try self.expectPeek(.left_brace);
+
+            self.nextToken();
 
             elseBlock = try self.parseBlock();
         }
@@ -723,6 +730,47 @@ test "if else" {
                 defer ifExpression.thenBranch.statements.deinit();
 
                 ifExpression.thenBranch.statements.append(ast.Statement{ .return_ = returnStatement }) catch return error.TestIfElse;
+
+                var expr = ast.Expression{ .if_ = ifExpression };
+
+                try expectOneStatementInProgram(&ast.Statement{ .expressionStatement = ast.ExpressionStatement{
+                    .expression = &expr,
+                } }, program);
+            }
+        }.function);
+    }
+
+    {
+        try parseProgramForTesting("if ($x < 10) { return 10; } else { return 20; }", struct {
+            fn function(program: *const ast.Program) !void {
+                var left = ast.Expression{ .variable = ast.Variable{ .value = "x" } };
+                var right = ast.Expression{ .integer = ast.Integer{ .value = 10 } };
+
+                const infixExpression = ast.InfixExpression{ .left = &left, .operator = ast.Operator.lt, .right = &right };
+
+                var condition = ast.Expression{ .infixExpression = infixExpression };
+
+                var intExpr1 = ast.Expression{ .integer = ast.Integer{ .value = 10 } };
+                var intExpr2 = ast.Expression{ .integer = ast.Integer{ .value = 20 } };
+
+                const returnStatement1 = ast.Return{ .value = &intExpr1 };
+                const returnStatement2 = ast.Return{ .value = &intExpr2 };
+
+                var ifExpression = ast.If{
+                    .condition = &condition,
+                    .thenBranch = ast.Block{
+                        .statements = std.ArrayList(ast.Statement).init(std.testing.allocator),
+                    },
+                    .elseBranch = ast.Block{
+                        .statements = std.ArrayList(ast.Statement).init(std.testing.allocator),
+                    },
+                };
+
+                defer ifExpression.thenBranch.statements.deinit();
+                defer ifExpression.elseBranch.?.statements.deinit();
+
+                ifExpression.thenBranch.statements.append(ast.Statement{ .return_ = returnStatement1 }) catch return error.TestIfElse;
+                ifExpression.elseBranch.?.statements.append(ast.Statement{ .return_ = returnStatement2 }) catch return error.TestIfElse;
 
                 var expr = ast.Expression{ .if_ = ifExpression };
 

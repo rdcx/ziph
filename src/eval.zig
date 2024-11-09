@@ -135,6 +135,7 @@ pub const Evaluator = struct {
                 return try self.applyFunction(function, args);
             },
             .if_ => |*if_| return try self.evalIfExpression(if_, env),
+            .boolean => |boolean| return nativeBoolToBooleanObject(boolean.value),
             // else => @panic("Bug: unsupported"),
         }
     }
